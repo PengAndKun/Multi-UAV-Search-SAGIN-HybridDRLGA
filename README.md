@@ -30,6 +30,11 @@ In particular, the **_Comparison.ipynb_** notebook summarizes the experimental o
 
 The **improved_experiment** folder contains our optimized versions of the experiments.
 
+This part of the experimental data was also generated from the corresponding .ipynb notebooks. 
+We have retained all experimental results for reproducibility. The results have been organized and presented in tabular form in the Comparison.ipynb notebook for clear and structured comparison.
+
+![img_1.png](img_1.png)
+
 ## our_experiment
 
 The **our_experiment** directory contains the experimental data and environment specifically designed for this study
