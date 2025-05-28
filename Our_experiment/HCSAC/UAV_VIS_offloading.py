@@ -115,7 +115,7 @@ def visualize_trajectory(agent, offload_agent, env ,seed=0):
         """在右上角绘制当前平均不确定度信息"""
         font = pygame.font.SysFont('Arial', 24, bold=True)
         # 创建一个半透明的背景矩形 en: Create a semi-transparent background rectangle
-        bg_rect = pygame.Rect(SCREEN_WIDTH - 300, 10, 290, 50)
+        bg_rect = pygame.Rect(SCREEN_WIDTH - 360, 10, 360, 50)
         bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
         bg_surface.set_alpha(180)
         bg_surface.fill(WHITE)
@@ -123,7 +123,7 @@ def visualize_trajectory(agent, offload_agent, env ,seed=0):
         
         # 绘制当前平均不确定度 信息 en: Draw current average uncertainty information
         text_current = font.render(f"average uncertainty: {avg_uncertainty:.4f}", True, PURPLE)
-        screen.blit(text_current, (SCREEN_WIDTH - 290, 20))
+        screen.blit(text_current, (SCREEN_WIDTH - 350, 20))
         
         # 绘制边框 en: Draw border around the background rectangle
         pygame.draw.rect(screen, BLACK, bg_rect, 2)

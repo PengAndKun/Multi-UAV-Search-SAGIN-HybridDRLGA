@@ -48,7 +48,13 @@ The encrypted content is located in the **HCSAC/ENV** directory, and it has been
 
 We have placed both the experimental data and the pre-trained models in the **HCSAC/data** directory.
 
-![vis_offloading.gif](pigture/vis_offloading.gif)
 
+![vis_without_offloading.gif](pigture/vis_without_offloading.gif)
+
+![vis_offloading](pigture/vis_offloading.gif)
+
+![GA_without.gif](pigture/GA_without.gif)
+
+![GA_optimal.gif](pigture/GA_optimal.gif)
 # detail
 
