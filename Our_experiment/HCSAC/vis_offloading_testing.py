@@ -3,10 +3,12 @@ import os
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+env_path= os.path.abspath(os.path.join(project_root, 'Our_experiment', 'HCSAC', 'ENV', 'dist'))
 sys.path.append(project_root)
+sys.path.append(env_path)
 
-from Our_experiment.HCSAC.ENV.UAVenv_Original import UAVEnv as UAVenv
-from Our_experiment.HCSAC.ENV.UAVenv_Original import SAC
+from Our_experiment.HCSAC.ENV.dist.UAVenv_SAC import UAVEnv as UAVenv
+from Our_experiment.HCSAC.ENV.dist.UAVenv_SAC import SAC
 
 from Our_experiment.HCSAC.UAV_VIS_offloading import visualize_trajectory as vis
 from Our_experiment.HCSAC import UAV_SAVE
