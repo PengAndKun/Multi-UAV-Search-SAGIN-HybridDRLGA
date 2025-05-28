@@ -30,8 +30,9 @@ In particular, the **_Comparison.ipynb_** notebook summarizes the experimental o
 
 The **improved_experiment** folder contains our optimized versions of the experiments.
 
-This part of the experimental data was also generated from the corresponding .ipynb notebooks. 
-We have retained all experimental results for reproducibility. The results have been organized and presented in tabular form in the Comparison.ipynb notebook for clear and structured comparison.
+This part of the experimental data was also generated from the corresponding **_.ipynb_** notebooks. 
+We have retained all experimental results for reproducibility. The results have been organized and 
+presented in tabular form in the **_Comparison.ipynb_** notebook for clear and structured comparison.
 
 ![img_1.png](img_1.png)
 
@@ -44,6 +45,9 @@ The HCSAC directory contains environment modeling and algorithm optimization tai
 Please note that, for confidentiality, the environment and algorithm are currently encrypted and will be disclosed after the paper is accepted for publication
 
 The encrypted content is located in the **HCSAC/ENV** directory, and it has been designed to be compatible with Windows and macOS platforms.
+
+We have placed both the experimental data and the pre-trained models in the **HCSAC/data** directory.
+
 
 # detail
 
