@@ -48,13 +48,45 @@ The encrypted content is located in the **HCSAC/ENV** directory, and it has been
 
 We have placed both the experimental data and the pre-trained models in the **HCSAC/data** directory.
 
+### HCSAC
 
-![vis_without_offloading.gif](pigture/vis_without_offloading.gif)
+The model integration has been completed. To begin, please start by running the initial set of experiments.
 
-![vis_offloading](pigture/vis_offloading.gif)
+```bash
+cd our_experiment/HCSAC
+python vis_offloading.py
+python vis_without_offloading.py
+```
 
-![GA_without.gif](pigture/GA_without.gif)
+The execution of the code results in the generation of two trajectory plots, as shown below.
 
-![GA_optimal.gif](pigture/GA_optimal.gif)
-# detail
+| Without Offloading | Offloading |
+|--------------------|------------|
+|![vis_without_offloading.gif](pigture/vis_without_offloading.gif)|![vis_offloading](pigture/vis_offloading.gif)|
+
+
+Following this, we tested how the algorithm performs in terms of uncertainty when varying the number of UAVs in the scenario.
+
+![img.png](pigture/img_2.png)
+
+### GA
+
+Subsequently, we performed a GA-based optimization experiment to determine the optimal deployment locations. 
+The algorithm was iterated 30 times using 50 randomly initialized samples. As a result, we identified the best-performing population, 
+the optimal deployment configuration, and the corresponding optimal trajectories.
+
+![img3.png](pigture/img_3.png)
+
+In the final step, we performed trajectory execution and generated UAV trajectory plots, comparing the results before and after applying the GA-based optimization.
+
+```bash
+cd our_experiment/GA
+python GA_Optimal_population_testing_0.py
+python vis_without_Optimal_population_testing_0.py
+```
+
+| Without GA | Usa Optimal GA                            |
+|------------|-------------------------------------------|
+|![GA_without.gif](pigture/GA_without.gif)| ![GA_optimal.gif](pigture/GA_optimal.gif) |
+
 
