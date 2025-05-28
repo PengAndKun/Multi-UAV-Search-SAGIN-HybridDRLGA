@@ -26,7 +26,7 @@ Experiments reproduced from other published papers are organized in the **Reprod
 The data used in our experiments were generated from the provided **_.ipynb_** notebooks. We have also preserved the corresponding experimental results. 
 In particular, the **_Comparison.ipynb_** notebook summarizes the experimental outcomes and presents them in tabular form for clear comparison.
 
-![img.png](img.png)
+![img.png](pigture/img.png)
 
 The **improved_experiment** folder contains our optimized versions of the experiments.
 
@@ -34,7 +34,7 @@ This part of the experimental data was also generated from the corresponding **_
 We have retained all experimental results for reproducibility. The results have been organized and 
 presented in tabular form in the **_Comparison.ipynb_** notebook for clear and structured comparison.
 
-![img_1.png](img_1.png)
+![img_1.png](pigture/img_1.png)
 
 ## our_experiment
 
@@ -48,6 +48,7 @@ The encrypted content is located in the **HCSAC/ENV** directory, and it has been
 
 We have placed both the experimental data and the pre-trained models in the **HCSAC/data** directory.
 
+![vis_offloading.gif](pigture/vis_offloading.gif)
 
 # detail
 
