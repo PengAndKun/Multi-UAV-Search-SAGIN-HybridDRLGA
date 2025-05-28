@@ -22,3 +22,5 @@ get_terrain_map_num()
 Obtain the regional task matrix\
 get_task_matrix()
 
+You can use the `map_generator.py` script to generate random terrains. The generated maps will be saved in the **map** folder.
+![img.png](img.png)
