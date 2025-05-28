@@ -1,0 +1,8 @@
+matplotlib==3.10.3
+networkx==3.3
+noise==1.2.2
+numpy==2.2.6
+pygame==2.6.1
+torch==2.4.1
+torch_geometric==2.6.1
+tqdm==4.66.5
