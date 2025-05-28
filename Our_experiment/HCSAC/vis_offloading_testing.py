@@ -5,10 +5,11 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
 sys.path.append(project_root)
 
-from Our_experiment.HCSAC.UAVenv import UAVEnv as UAVenv
+from Our_experiment.HCSAC.ENV.UAVenv_Original import UAVEnv as UAVenv
+from Our_experiment.HCSAC.ENV.UAVenv_Original import SAC
+
 from Our_experiment.HCSAC.UAV_VIS_offloading import visualize_trajectory as vis
 from Our_experiment.HCSAC import UAV_SAVE
-from Our_experiment.GA.algorithm import SAC
 import torch
 import numpy as np
 
@@ -31,9 +32,9 @@ target_entropy_offload = -np.log(offload_action_dim)
 
 
 
-agent = SAC.SAC(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, alpha_lr,
+agent = SAC(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, alpha_lr,
                 target_entropy, tau, gamma, device)
-offload_agent = SAC.SAC(offload_state_dim, hidden_dim, offload_action_dim, actor_lr, critic_lr, alpha_lr, target_entropy_offload, tau, gamma, device, type ='GCN')
+offload_agent = SAC(offload_state_dim, hidden_dim, offload_action_dim, actor_lr, critic_lr, alpha_lr, target_entropy_offload, tau, gamma, device, type ='GCN')
 agent = UAV_SAVE.load_sac_agent(agent, path='../HCSAC/data/sac_model_fly',device=device)
 offload_agent = UAV_SAVE.load_sac_agent(offload_agent, path='../HCSAC/data/sac_model_offload',device=device)
 
