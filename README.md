@@ -74,6 +74,13 @@ Following this, we tested how the algorithm performs in terms of uncertainty whe
 
 ![img.png](pigture/img_2.png)
 
+We applied a hybrid convolutional approach to optimize both UAV trajectory planning and task offloading within the environment. 
+The figure below demonstrates that our discretized SAC algorithm is well-suited for supporting both flight control and offloading decision-making for UAVs.
+
+| CNN | GCN |
+|-----|-----|
+|![cnn](pigture/trajectory.png)|![GCN](pigture/offloading.png)|
+
 ### GA
 
 Subsequently, we performed a GA-based optimization experiment to determine the optimal deployment locations. 
