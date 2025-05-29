@@ -103,4 +103,4 @@ python vis_without_Optimal_population_testing_0.py
 |![GA_without.gif](pigture/GA_without.gif)| ![GA_optimal.gif](pigture/GA_optimal.gif) |
 
 
-If you need the source code, please contact me via email.
+**If you need part of the source code before encryption, please contact me via email.**
