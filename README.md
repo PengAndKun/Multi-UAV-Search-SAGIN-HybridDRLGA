@@ -48,7 +48,12 @@ The encrypted content is located in the **HCSAC/ENV** directory, and it has been
 
 We have placed both the experimental data and the pre-trained models in the **HCSAC/data** directory.
 
+We conducted a comparison of various deep reinforcement learning algorithms trained using our hybrid convolution method. The experimental setup is illustrated in the following diagram.
+
+![img.png](pigture/img_4.png)
+
 ### HCSAC
+
 
 The model integration has been completed. To begin, please start by running the initial set of experiments.
 
