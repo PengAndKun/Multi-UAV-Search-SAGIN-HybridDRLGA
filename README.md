@@ -50,7 +50,7 @@ We have placed both the experimental data and the pre-trained models in the **HC
 
 We conducted a comparison of various deep reinforcement learning algorithms trained using our hybrid convolution method. The experimental setup is illustrated in the following diagram.
 
-![img.png](pigture/img_4.png)
+![img.png](pigture/self_experiment.png)
 
 We applied a hybrid convolutional approach to optimize both UAV trajectory planning and task offloading within the environment. 
 The figure below demonstrates that our discretized SAC algorithm is well-suited for supporting both flight control and offloading decision-making for UAVs.
