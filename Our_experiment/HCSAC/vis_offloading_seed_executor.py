@@ -21,12 +21,14 @@ import pygame
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run a single seed with seed-search-consistent behavior.")
-    parser.add_argument("--seed", type=int, required=True, help="Seed to reproduce from vis_offloading_seed_search.")
+    parser.add_argument("--seed", type=int, default=None, help="Legacy single seed (maps to both wind/traj if others unset).")
+    parser.add_argument("--wind-seed", type=int, default=None, help="Seed controlling wind field/environment reset.")
+    parser.add_argument("--traj-seed", type=int, default=None, help="Seed controlling stochastic trajectory sampling.")
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_devices_seed_{seed}.png",
-        help="Output path for 4-device offloading heatmap. Supports {seed} placeholder.",
+        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_w{wind_seed}_t{traj_seed}.png",
+        help="Output path for 4-device offloading heatmap. Supports {wind_seed}/{traj_seed} placeholders.",
     )
     parser.add_argument(
         "--show",
@@ -104,7 +106,7 @@ def build_agents_and_env():
     return env, agent, offload_agent
 
 
-def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_targets, output_path, seed):
+def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_targets, output_path, wind_seed, traj_seed):
     title_fs = 24
     axis_label_fs = 20
     tick_fs = 16
@@ -124,20 +126,24 @@ def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_target
             origin="lower",
             interpolation="nearest",
         )
-        ax.set_title(f"{offload_targets[idx]} (seed={seed})", fontsize=title_fs)
+        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, t={traj_seed})", fontsize=title_fs)
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
 
     if mappable is not None:
-        cbar_ax = fig.add_axes([0.92, 0.13, 0.02, 0.74])
+        cbar_ax = fig.add_axes([0.885, 0.13, 0.024, 0.74])
         cbar = fig.colorbar(mappable, cax=cbar_ax)
-        cbar.set_label("Offloading Count", fontsize=cbar_label_fs)
+        cbar.set_label("Offloading Count", fontsize=cbar_label_fs, labelpad=14)
         cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
-    fig.suptitle("Offloading Heatmaps by Device (BS/HAPS/LEO/CE)", y=0.98, fontsize=suptitle_fs)
-    plt.tight_layout(rect=[0.0, 0.0, 0.9, 0.96])
-    plt.savefig(output_path, dpi=200)
+    fig.suptitle(
+        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, traj={traj_seed}]",
+        y=0.98,
+        fontsize=suptitle_fs,
+    )
+    plt.tight_layout(rect=[0.0, 0.0, 0.87, 0.96])
+    plt.savefig(output_path, dpi=200, bbox_inches="tight", pad_inches=0.1)
     plt.close()
 
 
@@ -145,13 +151,32 @@ def main():
     args = parse_args()
     configure_display(args.show)
 
-    env, agent, offload_agent = build_agents_and_env()
-    # Keep the same seed timing as vis_offloading_seed_search:
-    # seed is set immediately before the rollout.
-    set_seed(args.seed)
-    stats = vis(agent, offload_agent, env, seed=args.seed, return_stats=True)
+    # Resolve dual seeds with backward compatibility.
+    if args.wind_seed is None and args.traj_seed is None:
+        if args.seed is None:
+            raise ValueError("Please provide --wind-seed and --traj-seed, or legacy --seed.")
+        wind_seed = args.seed
+        traj_seed = args.seed
+    else:
+        wind_seed = args.wind_seed if args.wind_seed is not None else args.seed
+        traj_seed = args.traj_seed if args.traj_seed is not None else args.seed
+        if wind_seed is None or traj_seed is None:
+            raise ValueError("Both wind_seed and traj_seed must be resolved.")
 
-    output_path = args.heatmap_path.format(seed=args.seed)
+    env, agent, offload_agent = build_agents_and_env()
+    # Keep timing consistent with seed-search: set trajectory seed right before rollout.
+    set_seed(traj_seed)
+    stats = vis(
+        agent,
+        offload_agent,
+        env,
+        seed=traj_seed,
+        return_stats=True,
+        wind_seed=wind_seed,
+        traj_seed=traj_seed,
+    )
+
+    output_path = args.heatmap_path.format(wind_seed=wind_seed, traj_seed=traj_seed)
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -160,10 +185,12 @@ def main():
         stats["offload_heatmaps_by_target"],
         stats["offload_targets"],
         output_path,
-        args.seed,
+        wind_seed,
+        traj_seed,
     )
 
-    print(f"Replay seed: {args.seed}")
+    print(f"Replay wind_seed: {wind_seed}")
+    print(f"Replay traj_seed: {traj_seed}")
     print(f"Visualization shown: {args.show}")
     print(f"Average uncertainty: {float(stats['avg_uncertainty']):.6f}")
     print(f"Offloading heatmaps (BS/HAPS/LEO/CE) saved to: {output_path}")

@@ -7,7 +7,15 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.cm import ScalarMappable
 
-def visualize_trajectory(agent, offload_agent, env, seed=0, return_stats=False):
+def visualize_trajectory(
+    agent,
+    offload_agent,
+    env,
+    seed=0,
+    return_stats=False,
+    wind_seed=None,
+    traj_seed=None,
+):
     # 初始化 Pygame en: Initialize Pygame
     pygame.init()
 
@@ -164,14 +172,25 @@ def visualize_trajectory(agent, offload_agent, env, seed=0, return_stats=False):
 
     def simulate_trajectory(seed=0):
         """模拟并可视化无人机轨迹"""
-        if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.manual_seed(seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(seed)
-        reset_state = env.reset(seed=seed)  # 重置环境 en: Reset the environment
+        # Backward compatible default: if not provided, both seeds follow legacy `seed`
+        current_wind_seed = seed if wind_seed is None else wind_seed
+        current_traj_seed = seed if traj_seed is None else traj_seed
+
+        # Wind/environment seed controls wind subregion and env random initialization
+        if current_wind_seed is not None:
+            random.seed(current_wind_seed)
+            np.random.seed(current_wind_seed)
+        reset_state = env.reset(seed=current_wind_seed)  # 重置环境 en: Reset the environment
         state = reset_state if reset_state is not None else env._get_obs()  # 获取初始状态 en: Get initial state
+
+        # Trajectory seed controls stochastic action sampling
+        if current_traj_seed is not None:
+            random.seed(current_traj_seed)
+            np.random.seed(current_traj_seed)
+            torch.manual_seed(current_traj_seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(current_traj_seed)
+
         trajectories = [[] for _ in range(env.N)]  # 存储每个无人机的轨迹 en: Store trajectories for each UAV
         # 获取每个无人机的初始位置并添加到轨迹中 en: Get initial positions of each UAV and add to trajectories
         for i in range(env.N):
@@ -326,6 +345,8 @@ def visualize_trajectory(agent, offload_agent, env, seed=0, return_stats=False):
                 "offload_heatmap": offload_heatmap.copy(),
                 "offload_heatmaps_by_target": offload_heatmaps_by_target.copy(),
                 "offload_targets": OFFLOAD_TARGETS.copy(),
+                "wind_seed": current_wind_seed,
+                "traj_seed": current_traj_seed,
                 "visit_count": visit_count.copy(),
             }
         return current_avg_uncertainty

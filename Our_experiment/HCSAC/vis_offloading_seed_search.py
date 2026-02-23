@@ -28,13 +28,14 @@ pygame.time.wait = lambda ms: None
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Search best seed by minimum average uncertainty.")
-    parser.add_argument("--seed-start", type=int, default=0, help="Start seed (inclusive).")
-    parser.add_argument("--seed-end", type=int, default=9, help="End seed (inclusive).")
+    parser.add_argument("--wind-seed", type=int, default=0, help="Seed controlling wind field/environment reset.")
+    parser.add_argument("--traj-seed-start", type=int, default=0, help="Start trajectory seed (inclusive).")
+    parser.add_argument("--traj-seed-end", type=int, default=9, help="End trajectory seed (inclusive).")
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/best_offloading_heatmap_devices_seed_{seed}.png",
-        help="Output path for best-seed 4-device heatmap. Supports {seed} placeholder.",
+        default="Our_experiment/HCSAC/data/best_offloading_heatmap_w{wind_seed}_t{traj_seed}.png",
+        help="Output path for best-seed 4-device heatmap. Supports {wind_seed}/{traj_seed} placeholders.",
     )
     return parser.parse_args()
 
@@ -96,7 +97,7 @@ def build_agents_and_env():
     return env, agent, offload_agent
 
 
-def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_targets, output_path, seed):
+def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_targets, output_path, wind_seed, traj_seed):
     title_fs = 18
     axis_label_fs = 15
     tick_fs = 13
@@ -116,52 +117,64 @@ def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_target
             origin="lower",
             interpolation="nearest",
         )
-        ax.set_title(f"{offload_targets[idx]} (seed={seed})", fontsize=title_fs)
+        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, t={traj_seed})", fontsize=title_fs)
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
 
     if mappable is not None:
-        cbar_ax = fig.add_axes([0.92, 0.13, 0.02, 0.74])
+        cbar_ax = fig.add_axes([0.885, 0.13, 0.024, 0.74])
         cbar = fig.colorbar(mappable, cax=cbar_ax)
         cbar.set_label("Offloading Count", fontsize=cbar_label_fs)
         cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
-    fig.suptitle("Offloading Heatmaps by Device (BS/HAPS/LEO/CE)", y=0.98, fontsize=suptitle_fs)
-    plt.tight_layout(rect=[0.0, 0.0, 0.9, 0.96])
-    plt.savefig(output_path, dpi=200)
+    fig.suptitle(
+        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, traj={traj_seed}]",
+        y=0.98,
+        fontsize=suptitle_fs,
+    )
+    plt.tight_layout(rect=[0.0, 0.0, 0.87, 0.96])
+    plt.savefig(output_path, dpi=200, bbox_inches="tight", pad_inches=0.1)
     plt.close()
 
 
 def main():
     args = parse_args()
-    if args.seed_end < args.seed_start:
-        raise ValueError("seed-end must be >= seed-start")
+    if args.traj_seed_end < args.traj_seed_start:
+        raise ValueError("traj-seed-end must be >= traj-seed-start")
 
     env, agent, offload_agent = build_agents_and_env()
 
-    best_seed = None
+    best_traj_seed = None
     best_uncertainty = float("inf")
     best_stats = None
 
-    for seed in range(args.seed_start, args.seed_end + 1):
-        set_seed(seed)
-        stats = vis(agent, offload_agent, env, seed=seed, return_stats=True)
+    for traj_seed in range(args.traj_seed_start, args.traj_seed_end + 1):
+        set_seed(traj_seed)
+        stats = vis(
+            agent,
+            offload_agent,
+            env,
+            seed=traj_seed,
+            return_stats=True,
+            wind_seed=args.wind_seed,
+            traj_seed=traj_seed,
+        )
         avg_uncertainty = float(stats["avg_uncertainty"])
-        print(f"seed={seed}, average_uncertainty={avg_uncertainty:.6f}")
+        print(f"wind_seed={args.wind_seed}, traj_seed={traj_seed}, average_uncertainty={avg_uncertainty:.6f}")
 
         if avg_uncertainty < best_uncertainty:
             best_uncertainty = avg_uncertainty
-            best_seed = seed
+            best_traj_seed = traj_seed
             best_stats = {
                 "offload_heatmaps_by_target": stats["offload_heatmaps_by_target"].copy(),
                 "offload_targets": list(stats["offload_targets"]),
             }
 
-    if best_seed is None or best_stats is None:
+    if best_traj_seed is None or best_stats is None:
         raise RuntimeError("No seed result was produced.")
 
-    output_path = args.heatmap_path.format(seed=best_seed)
+    output_path = args.heatmap_path.format(wind_seed=args.wind_seed, traj_seed=best_traj_seed)
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -170,11 +183,13 @@ def main():
         best_stats["offload_heatmaps_by_target"],
         best_stats["offload_targets"],
         output_path,
-        best_seed,
+        args.wind_seed,
+        best_traj_seed,
     )
 
     print("-" * 60)
-    print(f"Best seed: {best_seed}")
+    print(f"Best wind_seed: {args.wind_seed}")
+    print(f"Best traj_seed: {best_traj_seed}")
     print(f"Minimum average uncertainty: {best_uncertainty:.6f}")
     print(f"Best-seed heatmap saved to: {output_path}")
 
