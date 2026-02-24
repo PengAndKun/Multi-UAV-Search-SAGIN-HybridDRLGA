@@ -200,6 +200,7 @@ def visualize_trajectory(
             trajectories[i].append((screen_x, screen_y))
         
         visit_count = np.zeros((GRID_SIZE, GRID_SIZE))  # 存储每个网格单元的访问次数 en: Store visit counts for each grid cell
+        visit_count_by_uav = np.zeros((env.N, GRID_SIZE, GRID_SIZE), dtype=np.float32)  # 每架无人机访问次数 # Per-UAV visit counts
         unload_count = {}  # 存储每个位置的卸载次数，格式: {(x, y): [本地, 基站, HAPS, LEO, 云端]}  # Store offload counts for each position, format: {(x, y): [Local, Base Station, HAPS, LEO, Cloud]}
         offload_heatmap = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.float32)  # 每个网格总卸载次数 # Total offload count per grid cell
         offload_heatmaps_by_target = np.zeros((len(OFFLOAD_TARGETS), GRID_SIZE, GRID_SIZE), dtype=np.float32)  # 按卸载目标统计 # Per-target offload heatmaps
@@ -259,6 +260,7 @@ def visualize_trajectory(
                 grid_x = int(pos[0])
                 grid_y = int(pos[1])
                 visit_count[grid_x, grid_y] += 1
+                visit_count_by_uav[i, grid_x, grid_y] += 1
 
                 # 更新卸载次数 # Update offload count
                 if current_pos not in unload_count:
@@ -348,6 +350,7 @@ def visualize_trajectory(
                 "wind_seed": current_wind_seed,
                 "traj_seed": current_traj_seed,
                 "visit_count": visit_count.copy(),
+                "visit_count_by_uav": visit_count_by_uav.copy(),
             }
         return current_avg_uncertainty
 

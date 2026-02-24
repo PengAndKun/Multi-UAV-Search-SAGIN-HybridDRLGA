@@ -145,7 +145,7 @@ def top_k_cells(freq_map, k=5):
     return result
 
 
-def generate_commentary(freq_map, uncertainty_list, wind_seed, wind_class):
+def generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, wind_class):
     lines = []
     lines.append("# Visit Frequency Commentary (Single Wind Field)")
     lines.append("")
@@ -159,39 +159,64 @@ def generate_commentary(freq_map, uncertainty_list, wind_seed, wind_class):
     lines.append("")
     lines.append(f"- Mean Average uncertainty = `{avg_unc:.6f}`")
     lines.append("")
-    lines.append("## Hotspot Cells (Top-10 Frequency)")
+    lines.append("## Hotspot Cells by UAV (Top-5 Frequency)")
     lines.append("")
-    for x, y, v in top_k_cells(freq_map, k=10):
-        lines.append(f"- cell ({x}, {y}): frequency `{v:.6f}`")
+    for uav_idx in range(freq_maps_by_uav.shape[0]):
+        lines.append(f"### UAV {uav_idx}")
+        for x, y, v in top_k_cells(freq_maps_by_uav[uav_idx], k=5):
+            lines.append(f"- cell ({x}, {y}): frequency `{v:.6f}`")
+        lines.append("")
 
     return "\n".join(lines) + "\n"
 
 
-def save_visit_frequency_heatmap(freq_map, output_path, wind_seed, wind_class):
-    fig, ax = plt.subplots(1, 1, figsize=(8, 7))
+def save_visit_frequency_heatmap(freq_maps_by_uav, output_path, wind_seed, wind_class):
+    n_uav = freq_maps_by_uav.shape[0]
+    cols = 2 if n_uav > 1 else 1
+    rows = int(np.ceil(n_uav / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(14, 12))
+    axes = np.array(axes).reshape(-1)
 
-    title_fs = 18
-    axis_label_fs = 14
-    tick_fs = 12
-    cbar_label_fs = 14
+    # Match typography with vis_offloading_seed_executor.py
+    title_fs = 24
+    axis_label_fs = 20
+    tick_fs = 16
+    suptitle_fs = 28
+    cbar_label_fs = 20
+    cbar_tick_fs = 16
 
-    mappable = ax.imshow(
-        freq_map.T,
-        cmap="viridis",
-        origin="lower",
-        interpolation="nearest",
+    vmin = float(np.min(freq_maps_by_uav))
+    vmax = float(np.max(freq_maps_by_uav))
+    mappable = None
+    for uav_idx in range(n_uav):
+        ax = axes[uav_idx]
+        mappable = ax.imshow(
+            freq_maps_by_uav[uav_idx].T,
+            cmap="viridis",
+            origin="lower",
+            interpolation="nearest",
+            vmin=vmin,
+            vmax=vmax,
+        )
+        ax.set_title(f"UAV {uav_idx}", fontsize=title_fs)
+        ax.set_xlabel("Grid X", fontsize=axis_label_fs)
+        ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
+        ax.tick_params(axis="both", labelsize=tick_fs)
+    for i in range(n_uav, len(axes)):
+        axes[i].axis("off")
+
+    # Use a dedicated right-side colorbar axis to avoid overlap with subplot area.
+    cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
+    cbar = fig.colorbar(mappable, cax=cbar_ax)
+    cbar.set_label("Visit Frequency", fontsize=cbar_label_fs, labelpad=14)
+    cbar.ax.tick_params(labelsize=cbar_tick_fs)
+
+    fig.suptitle(
+        f"UAV Visit Frequency by UAV (wind_seed={wind_seed}, {wind_class})",
+        fontsize=suptitle_fs,
+        y=0.98,
     )
-    ax.set_title(f"{wind_class} (wind_seed={wind_seed})", fontsize=title_fs)
-    ax.set_xlabel("Grid X", fontsize=axis_label_fs)
-    ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
-    ax.tick_params(axis="both", labelsize=tick_fs)
-
-    cbar = fig.colorbar(mappable, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("Visit Frequency", fontsize=cbar_label_fs, labelpad=10)
-    cbar.ax.tick_params(labelsize=tick_fs)
-
-    fig.suptitle("UAV Visit Frequency (all UAVs, single wind field)", fontsize=20, y=0.98)
-    plt.tight_layout(rect=[0.0, 0.0, 1.0, 0.95])
+    plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.95])
     plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
     plt.close()
 
@@ -208,6 +233,7 @@ def main():
     env, agent, offload_agent = build_agents_and_env()
 
     visit_sum = None
+    visit_sum_by_uav = None
     uncertainty_list = []
 
     for traj_seed in range(args.traj_seed_start, args.traj_seed_end + 1):
@@ -222,9 +248,13 @@ def main():
             traj_seed=traj_seed,
         )
         visit_count = stats["visit_count"].astype(np.float64)
+        visit_count_by_uav = stats["visit_count_by_uav"].astype(np.float64)
         if visit_sum is None:
             visit_sum = np.zeros_like(visit_count, dtype=np.float64)
+        if visit_sum_by_uav is None:
+            visit_sum_by_uav = np.zeros_like(visit_count_by_uav, dtype=np.float64)
         visit_sum += visit_count
+        visit_sum_by_uav += visit_count_by_uav
         uncertainty_list.append(float(stats["avg_uncertainty"]))
 
     print(
@@ -233,19 +263,21 @@ def main():
         f"runs={args.traj_seed_end - args.traj_seed_start + 1}"
     )
 
-    total = float(np.sum(visit_sum))
-    if total > 0:
-        freq_map = visit_sum / total
-    else:
-        freq_map = visit_sum
+    freq_maps_by_uav = np.zeros_like(visit_sum_by_uav, dtype=np.float64)
+    for uav_idx in range(visit_sum_by_uav.shape[0]):
+        uav_total = float(np.sum(visit_sum_by_uav[uav_idx]))
+        if uav_total > 0:
+            freq_maps_by_uav[uav_idx] = visit_sum_by_uav[uav_idx] / uav_total
+        else:
+            freq_maps_by_uav[uav_idx] = visit_sum_by_uav[uav_idx]
 
     heatmap_path = args.heatmap_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
     report_path = args.report_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
     os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
-    save_visit_frequency_heatmap(freq_map, heatmap_path, wind_seed, wind_class)
-    commentary = generate_commentary(freq_map, uncertainty_list, wind_seed, wind_class)
+    save_visit_frequency_heatmap(freq_maps_by_uav, heatmap_path, wind_seed, wind_class)
+    commentary = generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, wind_class)
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(commentary)
