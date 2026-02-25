@@ -169,6 +169,7 @@ def save_visit_frequency_heatmap(
     gbs_position,
     haps_position,
     grid_cell_size_m,
+    avg_uncertainty,
 ):
     n_uav = freq_maps_by_uav.shape[0]
     cols = 2 if n_uav > 1 else 1
@@ -214,7 +215,10 @@ def save_visit_frequency_heatmap(
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     title_line_1 = "GA UAV Visit Frequency by UAV"
-    title_line_2 = f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, cell={grid_cell_size_m:.0f}m"
+    title_line_2 = (
+        f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, "
+        f"cell={grid_cell_size_m:.0f}m, avg_unc={avg_uncertainty:.6f}"
+    )
     fig.suptitle(f"{title_line_1}\n{title_line_2}", fontsize=suptitle_fs, x=0.52, y=0.985)
     plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.92])
     plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
@@ -305,6 +309,7 @@ def main():
     os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
+    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     save_visit_frequency_heatmap(
         freq_maps_by_uav=freq_maps_by_uav,
         output_path=heatmap_path,
@@ -314,6 +319,7 @@ def main():
         gbs_position=gbs_position,
         haps_position=haps_position,
         grid_cell_size_m=grid_cell_size_m,
+        avg_uncertainty=mean_unc,
     )
     commentary = generate_commentary(
         freq_maps_by_uav=freq_maps_by_uav,
@@ -329,7 +335,6 @@ def main():
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(commentary)
 
-    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     print("-" * 60)
     print("GA visit frequency analysis done.")
     print(f"GA result JSON: {args.ga_result_json}")
