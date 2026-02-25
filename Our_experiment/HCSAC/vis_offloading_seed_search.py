@@ -35,13 +35,19 @@ def parse_args():
         default=None,
         help="Seed controlling terrain difficulty map generation. Default follows wind seed.",
     )
+    parser.add_argument(
+        "--infra-seed",
+        type=int,
+        default=None,
+        help="Seed controlling random GBS/HAPS ground positions. Default follows wind seed.",
+    )
     parser.add_argument("--traj-seed-start", type=int, default=0, help="Start trajectory seed (inclusive).")
     parser.add_argument("--traj-seed-end", type=int, default=9, help="End trajectory seed (inclusive).")
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/best_offloading_heatmap_w{wind_seed}_g{terrain_seed}_t{traj_seed}.png",
-        help="Output path for best-seed 4-device heatmap. Supports {wind_seed}/{terrain_seed}/{traj_seed} placeholders.",
+        default="Our_experiment/HCSAC/data/best_offloading_heatmap_w{wind_seed}_g{terrain_seed}_t{traj_seed}_i{infra_seed}.png",
+        help="Output path for best-seed 4-device heatmap. Supports {wind_seed}/{terrain_seed}/{traj_seed}/{infra_seed} placeholders.",
     )
     return parser.parse_args()
 
@@ -110,6 +116,10 @@ def save_offloading_heatmap_by_device(
     wind_seed,
     terrain_seed,
     traj_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
 ):
     title_fs = 18
     axis_label_fs = 15
@@ -123,17 +133,21 @@ def save_offloading_heatmap_by_device(
     axes = axes.flatten()
 
     mappable = None
-    for ax, idx in zip(axes, device_indices):
+    for plot_idx, (ax, idx) in enumerate(zip(axes, device_indices)):
         mappable = ax.imshow(
             offload_heatmaps_by_target[idx].T,
             cmap="hot",
             origin="lower",
             interpolation="nearest",
         )
-        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, g={terrain_seed}, t={traj_seed})", fontsize=title_fs)
+        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, g={terrain_seed}, t={traj_seed}, i={infra_seed})", fontsize=title_fs)
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
+        ax.scatter(gbs_position[0], gbs_position[1], marker="X", s=90, c="cyan", edgecolors="black", linewidths=1.0, label="GBS")
+        ax.scatter(haps_position[0], haps_position[1], marker="^", s=90, c="lime", edgecolors="black", linewidths=1.0, label="HAPS")
+        if plot_idx == 0:
+            ax.legend(loc="upper right", fontsize=10, framealpha=0.9)
 
     if mappable is not None:
         cbar_ax = fig.add_axes([0.885, 0.13, 0.024, 0.74])
@@ -142,7 +156,8 @@ def save_offloading_heatmap_by_device(
         cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, terrain={terrain_seed}, traj={traj_seed}]",
+        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) "
+        f"[wind={wind_seed}, terrain={terrain_seed}, traj={traj_seed}, infra={infra_seed}, cell={grid_cell_size_m:.0f}m]",
         y=0.98,
         fontsize=suptitle_fs,
     )
@@ -156,6 +171,7 @@ def main():
     if args.traj_seed_end < args.traj_seed_start:
         raise ValueError("traj-seed-end must be >= traj-seed-start")
     terrain_seed = args.terrain_seed if args.terrain_seed is not None else args.wind_seed
+    infra_seed = args.infra_seed if args.infra_seed is not None else args.wind_seed
 
     env, agent, offload_agent = build_agents_and_env()
 
@@ -174,6 +190,7 @@ def main():
             wind_seed=args.wind_seed,
             terrain_seed=terrain_seed,
             traj_seed=traj_seed,
+            infra_seed=infra_seed,
         )
         avg_uncertainty = float(stats["avg_uncertainty"])
         print(
@@ -187,6 +204,9 @@ def main():
             best_stats = {
                 "offload_heatmaps_by_target": stats["offload_heatmaps_by_target"].copy(),
                 "offload_targets": list(stats["offload_targets"]),
+                "gbs_position": np.array(stats["gbs_position"], dtype=np.float64).copy(),
+                "haps_position": np.array(stats["haps_position"], dtype=np.float64).copy(),
+                "grid_cell_size_m": float(stats["grid_cell_size_m"]),
             }
 
     if best_traj_seed is None or best_stats is None:
@@ -196,6 +216,7 @@ def main():
         wind_seed=args.wind_seed,
         terrain_seed=terrain_seed,
         traj_seed=best_traj_seed,
+        infra_seed=infra_seed,
     )
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -208,11 +229,22 @@ def main():
         args.wind_seed,
         terrain_seed,
         best_traj_seed,
+        infra_seed,
+        best_stats["gbs_position"],
+        best_stats["haps_position"],
+        best_stats["grid_cell_size_m"],
     )
 
     print("-" * 60)
     print(f"Best wind_seed: {args.wind_seed}")
     print(f"Terrain seed: {terrain_seed}")
+    print(f"Infrastructure seed: {infra_seed}")
+    print(
+        "GBS/HAPS positions (grid): "
+        f"GBS=({best_stats['gbs_position'][0]:.2f}, {best_stats['gbs_position'][1]:.2f}), "
+        f"HAPS=({best_stats['haps_position'][0]:.2f}, {best_stats['haps_position'][1]:.2f})"
+    )
+    print(f"Grid cell size: {best_stats['grid_cell_size_m']:.0f} m")
     print(f"Best traj_seed: {best_traj_seed}")
     print(f"Minimum average uncertainty: {best_uncertainty:.6f}")
     print(f"Best-seed heatmap saved to: {output_path}")

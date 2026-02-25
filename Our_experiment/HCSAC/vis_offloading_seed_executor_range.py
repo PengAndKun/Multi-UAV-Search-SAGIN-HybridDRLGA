@@ -44,6 +44,12 @@ def parse_args():
         help="Seed controlling terrain difficulty map generation. Default follows wind seed.",
     )
     parser.add_argument(
+        "--infra-seed",
+        type=int,
+        default=None,
+        help="Seed controlling random GBS/HAPS ground positions. Default follows wind seed.",
+    )
+    parser.add_argument(
         "--wind-class",
         type=str,
         default="Moderate Wind",
@@ -61,14 +67,14 @@ def parse_args():
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.png",
-        help="Output heatmap path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}_i{infra_seed}.png",
+        help="Output heatmap path. Supports {wind_seed}/{terrain_seed}/{start}/{end}/{infra_seed} placeholders.",
     )
     parser.add_argument(
         "--report-path",
         type=str,
-        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.md",
-        help="Output report path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}_i{infra_seed}.md",
+        help="Output report path. Supports {wind_seed}/{terrain_seed}/{start}/{end}/{infra_seed} placeholders.",
     )
     parser.add_argument(
         "--offload-metric",
@@ -80,14 +86,14 @@ def parse_args():
     parser.add_argument(
         "--terrain-map-path",
         type=str,
-        default="Our_experiment/HCSAC/data/terrain_difficulty_w{wind_seed}_g{terrain_seed}.png",
-        help="Output terrain difficulty map path. Supports {wind_seed}/{terrain_seed} placeholders.",
+        default="Our_experiment/HCSAC/data/terrain_difficulty_w{wind_seed}_g{terrain_seed}_i{infra_seed}.png",
+        help="Output terrain difficulty map path. Supports {wind_seed}/{terrain_seed}/{infra_seed} placeholders.",
     )
     parser.add_argument(
         "--wind-map-path",
         type=str,
-        default="Our_experiment/HCSAC/data/wind_field_w{wind_seed}_g{terrain_seed}.png",
-        help="Output wind field map path. Supports {wind_seed}/{terrain_seed} placeholders.",
+        default="Our_experiment/HCSAC/data/wind_field_w{wind_seed}_g{terrain_seed}_i{infra_seed}.png",
+        help="Output wind field map path. Supports {wind_seed}/{terrain_seed}/{infra_seed} placeholders.",
     )
     return parser.parse_args()
 
@@ -174,6 +180,10 @@ def generate_commentary(
     freq_maps_by_device,
     wind_seed,
     terrain_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
     wind_label,
     traj_seed_start,
     traj_seed_end,
@@ -185,8 +195,14 @@ def generate_commentary(
     lines.append("")
     lines.append(f"- Wind seed: `{wind_seed}`")
     lines.append(f"- Terrain seed: `{terrain_seed}`")
+    lines.append(f"- Infrastructure seed: `{infra_seed}`")
     lines.append(f"- Wind label: `{wind_label}`")
     lines.append(f"- Trajectory seed range: `{traj_seed_start}`-`{traj_seed_end}`")
+    lines.append(f"- Grid cell size: `{grid_cell_size_m:.0f} m`")
+    lines.append(
+        f"- GBS position (grid): `({gbs_position[0]:.2f}, {gbs_position[1]:.2f})`, "
+        f"HAPS position (grid): `({haps_position[0]:.2f}, {haps_position[1]:.2f})`"
+    )
     lines.append("")
 
     metric_name = "Count" if metric == "count" else "Frequency"
@@ -209,6 +225,10 @@ def save_offloading_frequency_heatmap(
     output_path,
     wind_seed,
     terrain_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
     wind_label,
     metric,
 ):
@@ -242,6 +262,10 @@ def save_offloading_frequency_heatmap(
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
+        ax.scatter(gbs_position[0], gbs_position[1], marker="X", s=110, c="cyan", edgecolors="black", linewidths=1.0, label="GBS")
+        ax.scatter(haps_position[0], haps_position[1], marker="^", s=110, c="lime", edgecolors="black", linewidths=1.0, label="HAPS")
+        if i == 0:
+            ax.legend(loc="upper right", fontsize=12, framealpha=0.9)
 
     # Dedicated right-side colorbar axis to avoid overlap
     cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
@@ -252,7 +276,8 @@ def save_offloading_frequency_heatmap(
 
     fig.suptitle(
         f"Offloading {('Count' if metric == 'count' else 'Frequency')} by Device "
-        f"(wind_seed={wind_seed}, terrain_seed={terrain_seed}, {wind_label})",
+        f"(wind_seed={wind_seed}, terrain_seed={terrain_seed}, infra_seed={infra_seed}, "
+        f"cell={grid_cell_size_m:.0f}m, {wind_label})",
         fontsize=suptitle_fs,
         y=0.98,
     )
@@ -261,7 +286,16 @@ def save_offloading_frequency_heatmap(
     plt.close()
 
 
-def save_terrain_difficulty_map(task_matrix, output_path, wind_seed, terrain_seed):
+def save_terrain_difficulty_map(
+    task_matrix,
+    output_path,
+    wind_seed,
+    terrain_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
+):
     title_fs = 24
     axis_label_fs = 20
     tick_fs = 16
@@ -282,6 +316,9 @@ def save_terrain_difficulty_map(task_matrix, output_path, wind_seed, terrain_see
     ax.set_xlabel("Grid X", fontsize=axis_label_fs)
     ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
     ax.tick_params(axis="both", labelsize=tick_fs)
+    ax.scatter(gbs_position[0], gbs_position[1], marker="X", s=140, c="cyan", edgecolors="black", linewidths=1.0, label="GBS")
+    ax.scatter(haps_position[0], haps_position[1], marker="^", s=140, c="lime", edgecolors="black", linewidths=1.0, label="HAPS")
+    ax.legend(loc="upper right", fontsize=12, framealpha=0.9)
 
     cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
     cbar = fig.colorbar(mappable, cax=cbar_ax)
@@ -289,7 +326,8 @@ def save_terrain_difficulty_map(task_matrix, output_path, wind_seed, terrain_see
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Terrain Difficulty Map (wind_seed={wind_seed}, terrain_seed={terrain_seed})",
+        f"Terrain Difficulty Map (wind_seed={wind_seed}, terrain_seed={terrain_seed}, "
+        f"infra_seed={infra_seed}, cell={grid_cell_size_m:.0f}m)",
         fontsize=suptitle_fs,
         y=0.98,
     )
@@ -298,7 +336,17 @@ def save_terrain_difficulty_map(task_matrix, output_path, wind_seed, terrain_see
     plt.close()
 
 
-def save_wind_field_map(wind_u, wind_v, output_path, wind_seed, terrain_seed):
+def save_wind_field_map(
+    wind_u,
+    wind_v,
+    output_path,
+    wind_seed,
+    terrain_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
+):
     title_fs = 24
     axis_label_fs = 20
     tick_fs = 16
@@ -334,6 +382,9 @@ def save_wind_field_map(wind_u, wind_v, output_path, wind_seed, terrain_seed):
     ax.set_xlabel("Grid X", fontsize=axis_label_fs)
     ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
     ax.tick_params(axis="both", labelsize=tick_fs)
+    ax.scatter(gbs_position[0], gbs_position[1], marker="X", s=140, c="cyan", edgecolors="black", linewidths=1.0, label="GBS")
+    ax.scatter(haps_position[0], haps_position[1], marker="^", s=140, c="lime", edgecolors="black", linewidths=1.0, label="HAPS")
+    ax.legend(loc="upper right", fontsize=12, framealpha=0.9)
 
     cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
     cbar = fig.colorbar(mappable, cax=cbar_ax)
@@ -341,7 +392,8 @@ def save_wind_field_map(wind_u, wind_v, output_path, wind_seed, terrain_seed):
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Wind Field Map (wind_seed={wind_seed}, terrain_seed={terrain_seed})",
+        f"Wind Field Map (wind_seed={wind_seed}, terrain_seed={terrain_seed}, "
+        f"infra_seed={infra_seed}, cell={grid_cell_size_m:.0f}m)",
         fontsize=suptitle_fs,
         y=0.98,
     )
@@ -358,18 +410,41 @@ def main():
     reps = load_wind_representatives(args.wind_catalog_json)
     wind_seed = int(args.wind_seed) if args.wind_seed is not None else int(reps[args.wind_class])
     terrain_seed = int(args.terrain_seed) if args.terrain_seed is not None else wind_seed
+    infra_seed = int(args.infra_seed) if args.infra_seed is not None else wind_seed
     wind_label = args.wind_class if args.wind_seed is None else "Custom Wind Seed"
 
     env, agent, offload_agent = build_agents_and_env()
 
     # Before rollouts: output terrain difficulty map and wind field map.
-    env.reset(seed=0, wind_seed=wind_seed, terrain_seed=terrain_seed)
-    terrain_map_path = args.terrain_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed)
-    wind_map_path = args.wind_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed)
+    env.reset(seed=0, wind_seed=wind_seed, terrain_seed=terrain_seed, infra_seed=infra_seed)
+    gbs_position = np.array(env.gbs_position, dtype=np.float64).copy()
+    haps_position = np.array(env.haps_position, dtype=np.float64).copy()
+    grid_cell_size_m = float(getattr(env, "grid_cell_size_m", env.X / env.Lx))
+    terrain_map_path = args.terrain_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed, infra_seed=infra_seed)
+    wind_map_path = args.wind_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed, infra_seed=infra_seed)
     os.makedirs(os.path.dirname(terrain_map_path), exist_ok=True)
     os.makedirs(os.path.dirname(wind_map_path), exist_ok=True)
-    save_terrain_difficulty_map(env.task_matrix.astype(np.float64), terrain_map_path, wind_seed, terrain_seed)
-    save_wind_field_map(env.wind_u.astype(np.float64), env.wind_v.astype(np.float64), wind_map_path, wind_seed, terrain_seed)
+    save_terrain_difficulty_map(
+        env.task_matrix.astype(np.float64),
+        terrain_map_path,
+        wind_seed,
+        terrain_seed,
+        infra_seed,
+        gbs_position,
+        haps_position,
+        grid_cell_size_m,
+    )
+    save_wind_field_map(
+        env.wind_u.astype(np.float64),
+        env.wind_v.astype(np.float64),
+        wind_map_path,
+        wind_seed,
+        terrain_seed,
+        infra_seed,
+        gbs_position,
+        haps_position,
+        grid_cell_size_m,
+    )
 
     # Device order from env: [L, BS, HAPS, LEO, CE], we only keep 4 offloading devices [BS,HAPS,LEO,CE]
     offload_sum_by_device = None  # shape: [4, grid_x, grid_y]
@@ -386,6 +461,7 @@ def main():
             wind_seed=wind_seed,
             terrain_seed=terrain_seed,
             traj_seed=traj_seed,
+            infra_seed=infra_seed,
         )
 
         heatmaps_all_targets = stats["offload_heatmaps_by_target"].astype(np.float64)
@@ -414,12 +490,14 @@ def main():
         terrain_seed=terrain_seed,
         start=args.traj_seed_start,
         end=args.traj_seed_end,
+        infra_seed=infra_seed,
     )
     report_path = args.report_path.format(
         wind_seed=wind_seed,
         terrain_seed=terrain_seed,
         start=args.traj_seed_start,
         end=args.traj_seed_end,
+        infra_seed=infra_seed,
     )
     os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
@@ -429,6 +507,10 @@ def main():
         heatmap_path,
         wind_seed,
         terrain_seed,
+        infra_seed,
+        gbs_position,
+        haps_position,
+        grid_cell_size_m,
         wind_label,
         args.offload_metric,
     )
@@ -436,6 +518,10 @@ def main():
         freq_maps_by_device,
         wind_seed,
         terrain_seed,
+        infra_seed,
+        gbs_position,
+        haps_position,
+        grid_cell_size_m,
         wind_label,
         args.traj_seed_start,
         args.traj_seed_end,
@@ -450,6 +536,13 @@ def main():
     print("Offloading frequency analysis done.")
     print(f"Wind used: class={wind_label}, wind_seed={wind_seed}")
     print(f"Terrain seed: {terrain_seed}")
+    print(f"Infrastructure seed: {infra_seed}")
+    print(
+        "GBS/HAPS positions (grid): "
+        f"GBS=({gbs_position[0]:.2f}, {gbs_position[1]:.2f}), "
+        f"HAPS=({haps_position[0]:.2f}, {haps_position[1]:.2f})"
+    )
+    print(f"Grid cell size: {grid_cell_size_m:.0f} m")
     print(f"Trajectory seed range: {args.traj_seed_start}-{args.traj_seed_end}")
     print(f"Offloading metric: {args.offload_metric}")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")

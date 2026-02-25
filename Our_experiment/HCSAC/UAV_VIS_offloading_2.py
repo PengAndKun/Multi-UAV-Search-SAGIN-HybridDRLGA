@@ -16,6 +16,7 @@ def visualize_trajectory(
     wind_seed=None,
     traj_seed=None,
     terrain_seed=None,
+    infra_seed=None,
 ):
     # 初始化 Pygame en: Initialize Pygame
     pygame.init()
@@ -177,12 +178,14 @@ def visualize_trajectory(
         current_wind_seed = seed if wind_seed is None else wind_seed
         current_traj_seed = seed if traj_seed is None else traj_seed
         current_terrain_seed = seed if terrain_seed is None else terrain_seed
+        current_infra_seed = seed if infra_seed is None else infra_seed
 
-        # Wind seed controls wind subregion; terrain seed controls task/difficulty matrix.
+        # Wind seed controls wind subregion; terrain seed controls difficulty map; infra seed controls GBS/HAPS positions.
         reset_state = env.reset(
             seed=seed,
             wind_seed=current_wind_seed,
             terrain_seed=current_terrain_seed,
+            infra_seed=current_infra_seed,
         )  # 重置环境 en: Reset the environment
         state = reset_state if reset_state is not None else env._get_obs()  # 获取初始状态 en: Get initial state
 
@@ -353,6 +356,10 @@ def visualize_trajectory(
                 "wind_seed": current_wind_seed,
                 "terrain_seed": current_terrain_seed,
                 "traj_seed": current_traj_seed,
+                "infra_seed": current_infra_seed,
+                "gbs_position": np.array(env.gbs_position, dtype=np.float64).copy(),
+                "haps_position": np.array(env.haps_position, dtype=np.float64).copy(),
+                "grid_cell_size_m": float(getattr(env, "grid_cell_size_m", env.X / env.Lx)),
                 "visit_count": visit_count.copy(),
                 "visit_count_by_uav": visit_count_by_uav.copy(),
             }

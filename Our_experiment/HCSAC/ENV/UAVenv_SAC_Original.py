@@ -26,6 +26,7 @@ class UAVEnv:
         self.M = 1  # UAV的质量（kg） en: UAV mass
         self.L = 64  # 通道数量 en: Number of channels
         self.Lx, self.Ly = 20, 20  # 搜索区域的网格划分 (en: Grid size of search area)
+        self.grid_cell_size_m = self.X / self.Lx  # 单格边长（米） en: Grid cell size in meters (500m for 20x20 over 10km)
         self.N = N  # UAV数量 (en: Number of UAVs)
         self.V = 20  # UAV的飞行方向上的速度（m/s）,真实无人机的速度 en: UAV speed
         self.f_ln = 2e9  # UAV的处理能力（cycles/s） en: UAV processing capability
@@ -73,8 +74,12 @@ class UAVEnv:
             (0, self.Ly // 2),                # 左边中点 en: Left middle
             (self.Lx - 1, self.Ly // 2)       # 右边中点 en: Right middle
         ]
-        # 定义基站的位置（在网格中的坐标） en: Define the position of the base station (in grid coordinates)
-        self.gbs_position = np.array([self.Lx // 2 - 0.5, self.Ly // 2 - 0.5])  # 默认放在区域中心 en: Default position at the center of the area
+        # 定义基站和HAPS在网格中的地面投影位置 en: Define GBS/HAPS ground projection positions in grid coordinates
+        self.default_gbs_position = np.array([self.Lx // 2 - 0.5, self.Ly // 2 - 0.5], dtype=np.float64)
+        self.default_haps_position = np.array([self.Lx // 2 - 0.5, self.Ly // 2 - 0.5], dtype=np.float64)
+        self.gbs_position = self.default_gbs_position.copy()
+        self.haps_position = self.default_haps_position.copy()
+        self.infra_seed = None
         self.haps_height = 20000   # HAPS的高度 en: HAPS height
         self.leo_height = 50000   # LEO的高度 en: LEO height
         self.d_c = 1000000   # 云服务器的距离 en: Distance to cloud server
@@ -107,6 +112,33 @@ class UAVEnv:
         self.offload_state_dim = 6
         
         self.G = self.generate_sagin_graph()  # 初始化图结构 en: Initialize graph structure
+
+    def _sample_infrastructure_positions(self, infra_seed=None):
+        """根据基础设施种子设置GBS/HAPS地面投影位置"""
+        # en: Set GBS/HAPS ground projection positions based on infrastructure seed.
+        self.infra_seed = infra_seed
+        if infra_seed is None:
+            self.gbs_position = self.default_gbs_position.copy()
+            self.haps_position = self.default_haps_position.copy()
+            return
+
+        rng = np.random.default_rng(infra_seed)
+        low = np.array([0.5, 0.5], dtype=np.float64)
+        high = np.array([self.Lx - 0.5, self.Ly - 0.5], dtype=np.float64)
+        self.gbs_position = rng.uniform(low=low, high=high)
+        self.haps_position = rng.uniform(low=low, high=high)
+
+    def _horizontal_distance_m(self, pos_a, pos_b):
+        """网格坐标转换到真实距离后的水平距离（米）"""
+        # en: Horizontal distance in meters after converting from grid coordinates.
+        delta = (np.array(pos_a, dtype=np.float64) - np.array(pos_b, dtype=np.float64)) * self.grid_cell_size_m
+        return float(np.linalg.norm(delta))
+
+    def _squared_link_distance_m(self, uav_pos, endpoint_pos, endpoint_height):
+        """三维链路距离平方（米^2）"""
+        # en: Squared 3D link distance in meters^2.
+        horizontal_distance = self._horizontal_distance_m(uav_pos, endpoint_pos)
+        return horizontal_distance ** 2 + float(endpoint_height) ** 2
         
     def _initialize_uav(self, initial_position, destination):
         """初始化无人机的状态"""
@@ -233,7 +265,7 @@ class UAVEnv:
             elif offload == 1:
                 ε = 0
                 #计算与基站的距离 en: Calculate distance to base station
-                d2 = (np.linalg.norm(uav['position']-self.gbs_position)*self.X/self.Lx)**2+self.H**2
+                d2 = self._squared_link_distance_m(uav['position'], self.gbs_position, self.H)
                 h_ngt=10**(self.h0/10)/d2 #信道功率增益 en: Channel power gain
                 #计算卸载到GBS产生的能耗 en: Calculate energy consumption for offloading to GBS
                 E = X_t*10**(self.Pn/10-3)*μ/(self.L*self.B* np.log2(1+10**(self.Pn/10-3)*h_ngt/self.sigma2))*(1+1/6)
@@ -254,8 +286,8 @@ class UAVEnv:
             #剩下的卸载方式后面补充 en: The remaining offloading methods will be added later
             elif offload == 2:
                 ε = 0
-                # 计算与HAPS的距离 - 这里要考虑到HAPS的高度 en: Calculate distance to HAPS - consider HAPS height
-                d2 =  self.haps_height**2
+                # 计算与HAPS的距离（水平距离+垂直高度） en: Calculate distance to HAPS (horizontal + vertical)
+                d2 = self._squared_link_distance_m(uav['position'], self.haps_position, self.haps_height)
                 # HAPS信道功率增益可能与GBS不同，一般空地链路衰减更小 en: HAPS channel power gain may differ from GBS, generally lower free-space path loss
                 h_haps = 10**(self.h0/10)/d2  # 可能需要不同的信道模型 en: HAPS channel model may need to be different
                 # 计算卸载到HAPS产生的能耗 en: Calculate energy consumption for offloading to HAPS
@@ -295,7 +327,7 @@ class UAVEnv:
             elif offload == 4:
                 ε = 0
                 #计算与基站的距离 en: Calculate distance to base station
-                d2 = (np.linalg.norm(uav['position']-self.gbs_position)*self.X/self.Lx)**2+self.H**2
+                d2 = self._squared_link_distance_m(uav['position'], self.gbs_position, self.H)
                 h_ngt=10**(self.h0/10)/d2 #信道功率增益 en: Channel power gain
                 #计算卸载到GBS产生的能耗 en: Calculate energy consumption for offloading to GBS
                 E = X_t*10**(self.Pn/10-3)*μ/(self.L*self.B* np.log2(1+10**(self.Pn/10-3)*h_ngt/self.sigma2))*(1+1/6)
@@ -455,6 +487,7 @@ class UAVEnv:
     def get_obs_2(self):
         """获取卸载决策的状态"""
         G = self.G.copy()  # 复制图结构 en: Copy the graph structure
+        max_grid_distance = np.sqrt((self.Lx - 1) ** 2 + (self.Ly - 1) ** 2)
         # 计算无人机与基站之间的距离并添加边 en: Calculate distance between UAVs and GBS and add edges
         for i, uav in enumerate(self.uavs):
             uav['link'] = 0  # 初始化连接状态 en: Initialize link status
@@ -464,24 +497,33 @@ class UAVEnv:
             if gbs_distance <= self.Lx//2:  # 这里假设距离不大于Lx//2就可以连接 en: Assume connection to GBS is possible if distance is less than Lx//2
                 G.add_edge(f"UAV_{i}", "GBS", edge_weight = 1-2*gbs_distance/self.Lx)
                 uav['link'] = 1  # 连接基站 en: Connected to GBS
+            # HAPS链路按水平距离衰减，保持全域可连 en: HAPS edge weight decays with distance while staying globally connected.
+            if G.has_edge(f"UAV_{i}", "HAPS"):
+                G.remove_edge(f"UAV_{i}", "HAPS")
+            haps_distance = np.linalg.norm(uav_pos - self.haps_position)
+            haps_weight = float(np.clip(1.0 - haps_distance / max_grid_distance, 0.05, 1.0))
+            G.add_edge(f"UAV_{i}", "HAPS", edge_weight=haps_weight)
 
         # 转换为PyTorch Geometric数据格式 en: Convert to PyTorch Geometric data format
         data = from_networkx(G)
         return data
 
-    def reset(self, seed=None, positions=None, destinations=None, wind_seed=None, terrain_seed=None):
+    def reset(self, seed=None, positions=None, destinations=None, wind_seed=None, terrain_seed=None, infra_seed=None):
         """重置环境"""
         # en: Reset the environment
         # Backward compatibility:
-        # legacy `seed` controls both wind and terrain when dedicated seeds are not provided.
-        if wind_seed is None and terrain_seed is None:
+        # legacy `seed` controls wind/terrain/infra when dedicated seeds are not provided.
+        if wind_seed is None and terrain_seed is None and infra_seed is None:
             wind_seed = seed
             terrain_seed = seed
+            infra_seed = seed
         else:
             if wind_seed is None:
                 wind_seed = seed
             if terrain_seed is None:
                 terrain_seed = seed
+            if infra_seed is None:
+                infra_seed = seed
 
         if positions is not None and destinations is not None and len(positions) == self.N and len(destinations) == self.N:
             self.uavs = [self._initialize_uav(positions[u],destinations[u]) for u in range(self.N)]  # 初始化无人机 en: Initialize UAVs
@@ -499,6 +541,8 @@ class UAVEnv:
             x, y = uav['position']
             self.uncertainty_matrix[x, y] = 0  # 起飞点不需要处理任务 en: Set uncertainty at takeoff points to 0, indicating no task processing needed
             self.uncertainty_matrix[x, y] = 0  # 起飞点不需要处理任务 en: Set uncertainty at takeoff points to 0, indicating no task processing needed
+        # 基础设施位置（GBS/HAPS）重采样 en: Resample infrastructure positions (GBS/HAPS).
+        self._sample_infrastructure_positions(infra_seed)
         #重置风的区域 en: Reset wind subregion
         if wind_seed is not None:
             random.seed(wind_seed)

@@ -21,15 +21,16 @@ import pygame
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run a single seed with seed-search-consistent behavior.")
-    parser.add_argument("--seed", type=int, default=None, help="Legacy single seed (maps to both wind/traj if others unset).")
+    parser.add_argument("--seed", type=int, default=None, help="Legacy single seed (maps to wind/terrain/traj/infra if others unset).")
     parser.add_argument("--wind-seed", type=int, default=None, help="Seed controlling wind field/environment reset.")
     parser.add_argument("--terrain-seed", type=int, default=None, help="Seed controlling terrain difficulty map generation.")
     parser.add_argument("--traj-seed", type=int, default=None, help="Seed controlling stochastic trajectory sampling.")
+    parser.add_argument("--infra-seed", type=int, default=None, help="Seed controlling random GBS/HAPS ground positions.")
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_w{wind_seed}_g{terrain_seed}_t{traj_seed}.png",
-        help="Output path for 4-device offloading heatmap. Supports {wind_seed}/{terrain_seed}/{traj_seed} placeholders.",
+        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_w{wind_seed}_g{terrain_seed}_t{traj_seed}_i{infra_seed}.png",
+        help="Output path for 4-device offloading heatmap. Supports {wind_seed}/{terrain_seed}/{traj_seed}/{infra_seed} placeholders.",
     )
     parser.add_argument(
         "--show",
@@ -114,6 +115,10 @@ def save_offloading_heatmap_by_device(
     wind_seed,
     terrain_seed,
     traj_seed,
+    infra_seed,
+    gbs_position,
+    haps_position,
+    grid_cell_size_m,
 ):
     title_fs = 24
     axis_label_fs = 20
@@ -127,17 +132,21 @@ def save_offloading_heatmap_by_device(
     axes = axes.flatten()
 
     mappable = None
-    for ax, idx in zip(axes, device_indices):
+    for plot_idx, (ax, idx) in enumerate(zip(axes, device_indices)):
         mappable = ax.imshow(
             offload_heatmaps_by_target[idx].T,
             cmap="hot",
             origin="lower",
             interpolation="nearest",
         )
-        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, g={terrain_seed}, t={traj_seed})", fontsize=title_fs)
+        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, g={terrain_seed}, t={traj_seed}, i={infra_seed})", fontsize=title_fs)
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
+        ax.scatter(gbs_position[0], gbs_position[1], marker="X", s=110, c="cyan", edgecolors="black", linewidths=1.0, label="GBS")
+        ax.scatter(haps_position[0], haps_position[1], marker="^", s=110, c="lime", edgecolors="black", linewidths=1.0, label="HAPS")
+        if plot_idx == 0:
+            ax.legend(loc="upper right", fontsize=12, framealpha=0.9)
 
     if mappable is not None:
         cbar_ax = fig.add_axes([0.885, 0.13, 0.024, 0.74])
@@ -146,7 +155,8 @@ def save_offloading_heatmap_by_device(
         cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, terrain={terrain_seed}, traj={traj_seed}]",
+        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) "
+        f"[wind={wind_seed}, terrain={terrain_seed}, traj={traj_seed}, infra={infra_seed}, cell={grid_cell_size_m:.0f}m]",
         y=0.98,
         fontsize=suptitle_fs,
     )
@@ -159,19 +169,21 @@ def main():
     args = parse_args()
     configure_display(args.show)
 
-    # Resolve dual seeds with backward compatibility.
-    if args.wind_seed is None and args.terrain_seed is None and args.traj_seed is None:
+    # Resolve seeds with backward compatibility.
+    if args.wind_seed is None and args.terrain_seed is None and args.traj_seed is None and args.infra_seed is None:
         if args.seed is None:
-            raise ValueError("Please provide seeds (--wind-seed/--terrain-seed/--traj-seed) or legacy --seed.")
+            raise ValueError("Please provide seeds (--wind-seed/--terrain-seed/--traj-seed/--infra-seed) or legacy --seed.")
         wind_seed = args.seed
         terrain_seed = args.seed
         traj_seed = args.seed
+        infra_seed = args.seed
     else:
         wind_seed = args.wind_seed if args.wind_seed is not None else args.seed
         terrain_seed = args.terrain_seed if args.terrain_seed is not None else args.seed
         traj_seed = args.traj_seed if args.traj_seed is not None else args.seed
-        if wind_seed is None or terrain_seed is None or traj_seed is None:
-            raise ValueError("wind_seed, terrain_seed and traj_seed must all be resolved.")
+        infra_seed = args.infra_seed if args.infra_seed is not None else args.seed
+        if wind_seed is None or terrain_seed is None or traj_seed is None or infra_seed is None:
+            raise ValueError("wind_seed, terrain_seed, traj_seed and infra_seed must all be resolved.")
 
     env, agent, offload_agent = build_agents_and_env()
     # Keep timing consistent with seed-search: set trajectory seed right before rollout.
@@ -185,12 +197,14 @@ def main():
         wind_seed=wind_seed,
         terrain_seed=terrain_seed,
         traj_seed=traj_seed,
+        infra_seed=infra_seed,
     )
 
     output_path = args.heatmap_path.format(
         wind_seed=wind_seed,
         terrain_seed=terrain_seed,
         traj_seed=traj_seed,
+        infra_seed=infra_seed,
     )
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -203,11 +217,22 @@ def main():
         wind_seed,
         terrain_seed,
         traj_seed,
+        infra_seed,
+        stats["gbs_position"],
+        stats["haps_position"],
+        stats["grid_cell_size_m"],
     )
 
     print(f"Replay wind_seed: {wind_seed}")
     print(f"Replay terrain_seed: {terrain_seed}")
     print(f"Replay traj_seed: {traj_seed}")
+    print(f"Replay infra_seed: {infra_seed}")
+    print(
+        "GBS/HAPS positions (grid): "
+        f"GBS=({stats['gbs_position'][0]:.2f}, {stats['gbs_position'][1]:.2f}), "
+        f"HAPS=({stats['haps_position'][0]:.2f}, {stats['haps_position'][1]:.2f})"
+    )
+    print(f"Grid cell size: {stats['grid_cell_size_m']:.0f} m")
     print(f"Visualization shown: {args.show}")
     print(f"Average uncertainty: {float(stats['avg_uncertainty']):.6f}")
     print(f"Offloading heatmaps (BS/HAPS/LEO/CE) saved to: {output_path}")
