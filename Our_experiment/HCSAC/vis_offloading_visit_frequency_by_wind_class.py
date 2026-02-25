@@ -220,7 +220,7 @@ def save_visit_frequency_heatmap(
     title_fs = 24
     axis_label_fs = 20
     tick_fs = 16
-    suptitle_fs = 28
+    suptitle_fs = 24
     cbar_label_fs = 20
     cbar_tick_fs = 16
 
@@ -254,13 +254,21 @@ def save_visit_frequency_heatmap(
     cbar.set_label("Visit Frequency", fontsize=cbar_label_fs, labelpad=14)
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
-    fig.suptitle(
-        f"UAV Visit Frequency by UAV (wind_seed={wind_seed}, terrain_seed={terrain_seed}, "
-        f"infra_seed={infra_seed}, cell={grid_cell_size_m:.0f}m, {wind_class})",
-        fontsize=suptitle_fs,
-        y=0.98,
+    title_line_1 = "UAV Visit Frequency by UAV"
+    wind_suffix = ""
+    if wind_class and wind_class != "Custom Wind Seed":
+        wind_suffix = f", {wind_class}"
+    title_line_2 = (
+        f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, "
+        f"cell={grid_cell_size_m:.0f}m{wind_suffix}"
     )
-    plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.95])
+    fig.suptitle(
+        f"{title_line_1}\n{title_line_2}",
+        fontsize=suptitle_fs,
+        x=0.52,  # Center over subplot+colorbar content block.
+        y=0.985,
+    )
+    plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.92])
     plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
     plt.close()
 
