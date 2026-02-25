@@ -310,6 +310,7 @@ def main():
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
     mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
+    std_unc = float(np.std(uncertainty_list)) if uncertainty_list else float("nan")
     save_visit_frequency_heatmap(
         freq_maps_by_uav=freq_maps_by_uav,
         output_path=heatmap_path,
@@ -344,6 +345,7 @@ def main():
     print(f"Deployment positions: {deployment_positions}")
     print(f"Deployment destinations: {deployment_destinations}")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")
+    print(f"Std Average uncertainty: {std_unc:.6f}")
     print(f"Visit frequency heatmap: {heatmap_path}")
     print(f"Report: {report_path}")
 

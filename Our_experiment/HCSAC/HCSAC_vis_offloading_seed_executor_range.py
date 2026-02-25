@@ -592,6 +592,7 @@ def main():
         os.makedirs(report_dir, exist_ok=True)
 
     mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
+    std_unc = float(np.std(uncertainty_list)) if uncertainty_list else float("nan")
     save_offloading_frequency_heatmap(
         freq_maps_by_device,
         heatmap_path,
@@ -637,6 +638,7 @@ def main():
     print(f"Trajectory seeds used ({len(traj_seeds)}): {summarize_seed_list(traj_seeds)}")
     print(f"Offloading metric: {args.offload_metric}")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")
+    print(f"Std Average uncertainty: {std_unc:.6f}")
     print(f"Terrain map saved: {terrain_map_path}")
     print(f"Wind field map saved: {wind_map_path}")
     print(f"Heatmap saved: {heatmap_path}")

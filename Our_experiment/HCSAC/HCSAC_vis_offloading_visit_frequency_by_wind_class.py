@@ -462,6 +462,9 @@ def main():
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(commentary)
 
+    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
+    std_unc = float(np.std(uncertainty_list)) if uncertainty_list else float("nan")
+
     print("-" * 60)
     print("Visit frequency analysis done.")
     print(f"Wind used: class={wind_class}, wind_seed={wind_seed}")
@@ -476,6 +479,7 @@ def main():
     )
     print(f"Grid cell size: {grid_cell_size_m:.0f} m")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")
+    print(f"Std Average uncertainty: {std_unc:.6f}")
     print(f"Heatmap saved: {heatmap_path}")
     print(f"Commentary saved: {report_path}")
 
