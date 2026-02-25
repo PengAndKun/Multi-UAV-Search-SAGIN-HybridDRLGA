@@ -81,7 +81,7 @@ class UAVEnv:
         self.haps_position = self.default_haps_position.copy()
         self.infra_seed = None
         self.haps_height = 20000   # HAPS的高度 en: HAPS height
-        self.leo_height = 50000   # LEO的高度 en: LEO height
+        self.leo_height = 200000   # LEO的高度 en: LEO height
         self.d_c = 1000000   # 云服务器的距离 en: Distance to cloud server
 
         # UAVs状态 en: UAVs state

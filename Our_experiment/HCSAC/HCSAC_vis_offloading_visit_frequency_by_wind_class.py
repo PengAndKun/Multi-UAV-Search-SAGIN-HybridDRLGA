@@ -369,6 +369,8 @@ def main():
     visit_sum = None
     visit_sum_by_uav = None
     uncertainty_list = []
+    lifetime_steps_list = []
+    lifetime_seconds_list = []
 
     for traj_seed in traj_seeds:
         set_seed(int(traj_seed))
@@ -392,6 +394,8 @@ def main():
         visit_sum += visit_count
         visit_sum_by_uav += visit_count_by_uav
         uncertainty_list.append(float(stats["avg_uncertainty"]))
+        lifetime_steps_list.append(float(stats.get("avg_uav_lifetime_steps", np.nan)))
+        lifetime_seconds_list.append(float(stats.get("avg_uav_lifetime_seconds", np.nan)))
 
     print(
         f"wind_seed={wind_seed}, wind_class={wind_class}, "
@@ -464,6 +468,10 @@ def main():
 
     mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     std_unc = float(np.std(uncertainty_list)) if uncertainty_list else float("nan")
+    mean_lifetime_steps = float(np.nanmean(lifetime_steps_list)) if lifetime_steps_list else float("nan")
+    mean_lifetime_seconds = float(np.nanmean(lifetime_seconds_list)) if lifetime_seconds_list else float("nan")
+    std_lifetime_steps = float(np.nanstd(lifetime_steps_list)) if lifetime_steps_list else float("nan")
+    std_lifetime_seconds = float(np.nanstd(lifetime_seconds_list)) if lifetime_seconds_list else float("nan")
 
     print("-" * 60)
     print("Visit frequency analysis done.")
@@ -480,6 +488,8 @@ def main():
     print(f"Grid cell size: {grid_cell_size_m:.0f} m")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")
     print(f"Std Average uncertainty: {std_unc:.6f}")
+    print(f"Mean UAV lifetime: {mean_lifetime_steps:.2f} steps ({mean_lifetime_seconds:.2f} s)")
+    print(f"Std UAV lifetime: {std_lifetime_steps:.2f} steps ({std_lifetime_seconds:.2f} s)")
     print(f"Heatmap saved: {heatmap_path}")
     print(f"Commentary saved: {report_path}")
 

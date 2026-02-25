@@ -210,6 +210,8 @@ def visualize_trajectory(
         unload_count = {}  # 存储每个位置的卸载次数，格式: {(x, y): [本地, 基站, HAPS, LEO, 云端]}  # Store offload counts for each position, format: {(x, y): [Local, Base Station, HAPS, LEO, Cloud]}
         offload_heatmap = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.float32)  # 每个网格总卸载次数 # Total offload count per grid cell
         offload_heatmaps_by_target = np.zeros((len(OFFLOAD_TARGETS), GRID_SIZE, GRID_SIZE), dtype=np.float32)  # 按卸载目标统计 # Per-target offload heatmaps
+        uav_lifetime_steps = np.full(env.N, np.nan, dtype=np.float64)  # 每架无人机lifetime（step） # Per-UAV lifetime in steps
+        step_count = 0
         
         # 新增：存储两点之间路径的经过次数 # New: Store the count of paths between two points
         path_count = {}  # 格式: {((x1, y1), (x2, y2)): count}
@@ -218,6 +220,7 @@ def visualize_trajectory(
         
         # 主模拟循环 # Main simulation loop
         while not done:
+            step_count += 1
             # 处理事件 # Handle events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -240,6 +243,9 @@ def visualize_trajectory(
             
             # 计算当前平均不确定度 # Calculate current average uncertainty
             current_avg_uncertainty = np.mean(env.uncertainty_matrix)
+            for i, uav in enumerate(env.uavs):
+                if np.isnan(uav_lifetime_steps[i]) and bool(uav['done']):
+                    uav_lifetime_steps[i] = float(step_count)
 
             # 存储当前位置 并更新访问次数 # Store current positions and update visit counts
             for i, uav in enumerate(env.uavs):
@@ -346,6 +352,13 @@ def visualize_trajectory(
         
         pygame.time.wait(3000)  # 显示最终结果3秒 en: Wait for 3 seconds to show the final result
         pygame.quit()
+        if env.N > 0:
+            uav_lifetime_steps = np.where(np.isnan(uav_lifetime_steps), float(step_count), uav_lifetime_steps)
+            avg_uav_lifetime_steps = float(np.mean(uav_lifetime_steps))
+        else:
+            uav_lifetime_steps = np.array([], dtype=np.float64)
+            avg_uav_lifetime_steps = float(step_count)
+        avg_uav_lifetime_seconds = float(avg_uav_lifetime_steps * float(env.T))
 
         if return_stats:
             return {
@@ -362,6 +375,10 @@ def visualize_trajectory(
                 "grid_cell_size_m": float(getattr(env, "grid_cell_size_m", env.X / env.Lx)),
                 "visit_count": visit_count.copy(),
                 "visit_count_by_uav": visit_count_by_uav.copy(),
+                "step_count": int(step_count),
+                "uav_lifetime_steps": uav_lifetime_steps.tolist(),
+                "avg_uav_lifetime_steps": float(avg_uav_lifetime_steps),
+                "avg_uav_lifetime_seconds": float(avg_uav_lifetime_seconds),
             }
         return current_avg_uncertainty
 

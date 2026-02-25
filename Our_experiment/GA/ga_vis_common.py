@@ -184,10 +184,13 @@ def rollout_once(
     offload_heatmaps_by_target = np.zeros((len(OFFLOAD_TARGETS), grid_x, grid_y), dtype=np.float64)
     trajectory_actions = []
     offloading_actions = []
+    uav_lifetime_steps = np.full(env.N, np.nan, dtype=np.float64)
+    step_count = 0
 
     done = False
     current_avg_uncertainty = float(np.mean(env.uncertainty_matrix))
     while not done:
+        step_count += 1
         actions = [agent.take_action(state[n]) for n in range(env.N)]
         if return_actions:
             trajectory_actions.append(actions)
@@ -202,6 +205,10 @@ def rollout_once(
 
         current_avg_uncertainty = float(np.mean(env.uncertainty_matrix))
         for i, uav in enumerate(env.uavs):
+            if np.isnan(uav_lifetime_steps[i]) and bool(uav["done"]):
+                uav_lifetime_steps[i] = float(step_count)
+
+        for i, uav in enumerate(env.uavs):
             if uav["done"] and uav["position"] == uav["destination"]:
                 continue
 
@@ -214,6 +221,14 @@ def rollout_once(
             offload_action = int(np.clip(offload_action, 0, len(OFFLOAD_TARGETS) - 1))
             offload_heatmap[x, y] += 1.0
             offload_heatmaps_by_target[offload_action, x, y] += 1.0
+
+    if env.N > 0:
+        uav_lifetime_steps = np.where(np.isnan(uav_lifetime_steps), float(step_count), uav_lifetime_steps)
+        avg_uav_lifetime_steps = float(np.mean(uav_lifetime_steps))
+    else:
+        uav_lifetime_steps = np.array([], dtype=np.float64)
+        avg_uav_lifetime_steps = float(step_count)
+    avg_uav_lifetime_seconds = float(avg_uav_lifetime_steps * float(env.T))
 
     result = {
         "avg_uncertainty": current_avg_uncertainty,
@@ -229,6 +244,10 @@ def rollout_once(
         "gbs_position": np.array(env.gbs_position, dtype=np.float64).copy(),
         "haps_position": np.array(env.haps_position, dtype=np.float64).copy(),
         "grid_cell_size_m": float(getattr(env, "grid_cell_size_m", env.X / env.Lx)),
+        "step_count": int(step_count),
+        "uav_lifetime_steps": uav_lifetime_steps.tolist(),
+        "avg_uav_lifetime_steps": float(avg_uav_lifetime_steps),
+        "avg_uav_lifetime_seconds": float(avg_uav_lifetime_seconds),
     }
     if return_actions:
         result["trajectory_actions"] = trajectory_actions
