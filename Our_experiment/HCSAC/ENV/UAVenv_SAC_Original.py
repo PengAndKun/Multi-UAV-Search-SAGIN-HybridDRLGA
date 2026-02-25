@@ -469,18 +469,30 @@ class UAVEnv:
         data = from_networkx(G)
         return data
 
-    def reset(self, seed=None, positions=None, destinations=None):
+    def reset(self, seed=None, positions=None, destinations=None, wind_seed=None, terrain_seed=None):
         """重置环境"""
         # en: Reset the environment
-        if seed is not None:
-            np.random.seed(seed)
-            random.seed(seed)
+        # Backward compatibility:
+        # legacy `seed` controls both wind and terrain when dedicated seeds are not provided.
+        if wind_seed is None and terrain_seed is None:
+            wind_seed = seed
+            terrain_seed = seed
+        else:
+            if wind_seed is None:
+                wind_seed = seed
+            if terrain_seed is None:
+                terrain_seed = seed
+
         if positions is not None and destinations is not None and len(positions) == self.N and len(destinations) == self.N:
             self.uavs = [self._initialize_uav(positions[u],destinations[u]) for u in range(self.N)]  # 初始化无人机 en: Initialize UAVs
         else:
             self.uavs = [self._initialize_uav(self.gird_position[u],self.gird_position[u]) for u in range(self.N)] #初始化无人机 en: Initialize UAVs
         self.uncertainty_matrix = np.ones((self.Lx, self.Ly))  # 重置不确定度矩阵 en: Reset uncertainty matrix
-        self.task_matrix = np.random.randint(1, 5, size=(self.Lx, self.Ly)) # 重置任务难度矩阵 en: Reset task difficulty matrix
+        if terrain_seed is not None:
+            terrain_rng = np.random.default_rng(terrain_seed)
+            self.task_matrix = terrain_rng.integers(1, 5, size=(self.Lx, self.Ly))
+        else:
+            self.task_matrix = np.random.randint(1, 5, size=(self.Lx, self.Ly)) # 重置任务难度矩阵 en: Reset task difficulty matrix
         
         # 起飞点的不确定度设为0，表示不需要处理任务 en: Set uncertainty at takeoff points to 0, indicating no task processing needed
         for uav in self.uavs:
@@ -488,6 +500,8 @@ class UAVEnv:
             self.uncertainty_matrix[x, y] = 0  # 起飞点不需要处理任务 en: Set uncertainty at takeoff points to 0, indicating no task processing needed
             self.uncertainty_matrix[x, y] = 0  # 起飞点不需要处理任务 en: Set uncertainty at takeoff points to 0, indicating no task processing needed
         #重置风的区域 en: Reset wind subregion
+        if wind_seed is not None:
+            random.seed(wind_seed)
         self.wind_u, self.wind_v, _, _ = extract_wind_subregion(self.file_path,self.Lx)
         # 重置剩余搜索时间 en: Reset remaining search time
         self.remaining_time = self.max_search_time
