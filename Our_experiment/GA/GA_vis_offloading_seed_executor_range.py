@@ -194,6 +194,7 @@ def save_offloading_frequency_heatmap(
     haps_position,
     grid_cell_size_m,
     metric,
+    avg_uncertainty,
 ):
     title_fs = 24
     axis_label_fs = 20
@@ -237,7 +238,10 @@ def save_offloading_frequency_heatmap(
 
     metric_text = "Count" if metric == "count" else "Frequency"
     title_line_1 = f"GA Offloading {metric_text} by Device"
-    title_line_2 = f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, cell={grid_cell_size_m:.0f}m"
+    title_line_2 = (
+        f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, "
+        f"cell={grid_cell_size_m:.0f}m, avg_unc={avg_uncertainty:.6f}"
+    )
     fig.suptitle(f"{title_line_1}\n{title_line_2}", fontsize=suptitle_fs, x=0.52, y=0.985)
     plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.92])
     plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
@@ -456,6 +460,7 @@ def main():
         haps_position,
         grid_cell_size_m,
     )
+    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     save_offloading_frequency_heatmap(
         freq_maps_by_device,
         heatmap_path,
@@ -466,9 +471,8 @@ def main():
         haps_position,
         grid_cell_size_m,
         args.offload_metric,
+        mean_unc,
     )
-
-    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     commentary = generate_commentary(
         freq_maps_by_device=freq_maps_by_device,
         deployment_positions=deployment_positions,

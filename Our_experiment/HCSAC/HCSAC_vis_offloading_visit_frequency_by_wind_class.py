@@ -283,6 +283,7 @@ def save_visit_frequency_heatmap(
     haps_position,
     grid_cell_size_m,
     wind_class,
+    avg_uncertainty,
 ):
     n_uav = freq_maps_by_uav.shape[0]
     cols = 2 if n_uav > 1 else 1
@@ -334,7 +335,7 @@ def save_visit_frequency_heatmap(
         wind_suffix = f", {wind_class}"
     title_line_2 = (
         f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, "
-        f"cell={grid_cell_size_m:.0f}m{wind_suffix}"
+        f"cell={grid_cell_size_m:.0f}m, avg_unc={avg_uncertainty:.6f}{wind_suffix}"
     )
     fig.suptitle(
         f"{title_line_1}\n{title_line_2}",
@@ -431,6 +432,7 @@ def main():
     if report_dir:
         os.makedirs(report_dir, exist_ok=True)
 
+    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     save_visit_frequency_heatmap(
         freq_maps_by_uav,
         heatmap_path,
@@ -441,6 +443,7 @@ def main():
         haps_position,
         grid_cell_size_m,
         wind_class,
+        mean_unc,
     )
     commentary = generate_commentary(
         freq_maps_by_uav,
@@ -472,6 +475,7 @@ def main():
         f"HAPS=({haps_position[0]:.2f}, {haps_position[1]:.2f})"
     )
     print(f"Grid cell size: {grid_cell_size_m:.0f} m")
+    print(f"Mean Average uncertainty: {mean_unc:.6f}")
     print(f"Heatmap saved: {heatmap_path}")
     print(f"Commentary saved: {report_path}")
 

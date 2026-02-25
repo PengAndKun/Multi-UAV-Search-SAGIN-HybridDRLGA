@@ -1,8 +1,8 @@
-import os
-import sys
-import json
 import argparse
+import json
+import os
 import random
+import sys
 
 # Headless default for batch execution
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -302,6 +302,7 @@ def save_offloading_frequency_heatmap(
     grid_cell_size_m,
     wind_label,
     metric,
+    avg_uncertainty,
 ):
     # Match typography with vis_offloading_visit_frequency_by_wind_class.py
     title_fs = 24
@@ -352,7 +353,7 @@ def save_offloading_frequency_heatmap(
         wind_suffix = f", {wind_label}"
     title_line_2 = (
         f"w={wind_seed}, g={terrain_seed}, i={infra_seed}, "
-        f"cell={grid_cell_size_m:.0f}m{wind_suffix}"
+        f"cell={grid_cell_size_m:.0f}m, avg_unc={avg_uncertainty:.6f}{wind_suffix}"
     )
     fig.suptitle(
         f"{title_line_1}\n{title_line_2}",
@@ -590,6 +591,7 @@ def main():
     if report_dir:
         os.makedirs(report_dir, exist_ok=True)
 
+    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     save_offloading_frequency_heatmap(
         freq_maps_by_device,
         heatmap_path,
@@ -601,6 +603,7 @@ def main():
         grid_cell_size_m,
         wind_label,
         args.offload_metric,
+        mean_unc,
     )
     commentary = generate_commentary(
         freq_maps_by_device,
@@ -619,7 +622,6 @@ def main():
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(commentary)
 
-    mean_unc = float(np.mean(uncertainty_list)) if uncertainty_list else float("nan")
     print("-" * 60)
     print("Offloading frequency analysis done.")
     print(f"Wind used: class={wind_label}, wind_seed={wind_seed}")
