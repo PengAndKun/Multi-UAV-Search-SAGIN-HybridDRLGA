@@ -38,6 +38,12 @@ def parse_args():
         help="Directly set one wind seed. If omitted, representative seed will be taken from --wind-class in catalog.",
     )
     parser.add_argument(
+        "--terrain-seed",
+        type=int,
+        default=None,
+        help="Seed controlling terrain difficulty map generation. Default follows wind seed.",
+    )
+    parser.add_argument(
         "--wind-class",
         type=str,
         default="Moderate Wind",
@@ -55,14 +61,14 @@ def parse_args():
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/visit_frequency_w{wind_seed}_t{start}_{end}.png",
-        help="Output heatmap path. Supports {wind_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/visit_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.png",
+        help="Output heatmap path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
     )
     parser.add_argument(
         "--report-path",
         type=str,
-        default="Our_experiment/HCSAC/data/visit_frequency_w{wind_seed}_t{start}_{end}.md",
-        help="Output report path. Supports {wind_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/visit_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.md",
+        help="Output report path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
     )
     return parser.parse_args()
 
@@ -145,11 +151,12 @@ def top_k_cells(freq_map, k=5):
     return result
 
 
-def generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, wind_class):
+def generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, terrain_seed, wind_class):
     lines = []
     lines.append("# Visit Frequency Commentary (Single Wind Field)")
     lines.append("")
     lines.append(f"- Wind seed: `{wind_seed}`")
+    lines.append(f"- Terrain seed: `{terrain_seed}`")
     lines.append(f"- Wind label: `{wind_class}`")
     lines.append("")
 
@@ -170,7 +177,7 @@ def generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, wind_clas
     return "\n".join(lines) + "\n"
 
 
-def save_visit_frequency_heatmap(freq_maps_by_uav, output_path, wind_seed, wind_class):
+def save_visit_frequency_heatmap(freq_maps_by_uav, output_path, wind_seed, terrain_seed, wind_class):
     n_uav = freq_maps_by_uav.shape[0]
     cols = 2 if n_uav > 1 else 1
     rows = int(np.ceil(n_uav / cols))
@@ -212,7 +219,7 @@ def save_visit_frequency_heatmap(freq_maps_by_uav, output_path, wind_seed, wind_
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"UAV Visit Frequency by UAV (wind_seed={wind_seed}, {wind_class})",
+        f"UAV Visit Frequency by UAV (wind_seed={wind_seed}, terrain_seed={terrain_seed}, {wind_class})",
         fontsize=suptitle_fs,
         y=0.98,
     )
@@ -228,6 +235,7 @@ def main():
 
     reps = load_wind_representatives(args.wind_catalog_json)
     wind_seed = int(args.wind_seed) if args.wind_seed is not None else int(reps[args.wind_class])
+    terrain_seed = int(args.terrain_seed) if args.terrain_seed is not None else wind_seed
     wind_class = args.wind_class if args.wind_seed is None else f"Custom Wind Seed"
 
     env, agent, offload_agent = build_agents_and_env()
@@ -245,6 +253,7 @@ def main():
             seed=traj_seed,
             return_stats=True,
             wind_seed=wind_seed,
+            terrain_seed=terrain_seed,
             traj_seed=traj_seed,
         )
         visit_count = stats["visit_count"].astype(np.float64)
@@ -271,13 +280,23 @@ def main():
         else:
             freq_maps_by_uav[uav_idx] = visit_sum_by_uav[uav_idx]
 
-    heatmap_path = args.heatmap_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
-    report_path = args.report_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
+    heatmap_path = args.heatmap_path.format(
+        wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
+        start=args.traj_seed_start,
+        end=args.traj_seed_end,
+    )
+    report_path = args.report_path.format(
+        wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
+        start=args.traj_seed_start,
+        end=args.traj_seed_end,
+    )
     os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
-    save_visit_frequency_heatmap(freq_maps_by_uav, heatmap_path, wind_seed, wind_class)
-    commentary = generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, wind_class)
+    save_visit_frequency_heatmap(freq_maps_by_uav, heatmap_path, wind_seed, terrain_seed, wind_class)
+    commentary = generate_commentary(freq_maps_by_uav, uncertainty_list, wind_seed, terrain_seed, wind_class)
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(commentary)
@@ -285,6 +304,7 @@ def main():
     print("-" * 60)
     print("Visit frequency analysis done.")
     print(f"Wind used: class={wind_class}, wind_seed={wind_seed}")
+    print(f"Terrain seed: {terrain_seed}")
     print(f"Heatmap saved: {heatmap_path}")
     print(f"Commentary saved: {report_path}")
 

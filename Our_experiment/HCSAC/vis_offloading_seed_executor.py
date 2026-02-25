@@ -23,12 +23,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run a single seed with seed-search-consistent behavior.")
     parser.add_argument("--seed", type=int, default=None, help="Legacy single seed (maps to both wind/traj if others unset).")
     parser.add_argument("--wind-seed", type=int, default=None, help="Seed controlling wind field/environment reset.")
+    parser.add_argument("--terrain-seed", type=int, default=None, help="Seed controlling terrain difficulty map generation.")
     parser.add_argument("--traj-seed", type=int, default=None, help="Seed controlling stochastic trajectory sampling.")
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_w{wind_seed}_t{traj_seed}.png",
-        help="Output path for 4-device offloading heatmap. Supports {wind_seed}/{traj_seed} placeholders.",
+        default="Our_experiment/HCSAC/data/replay_offloading_heatmap_w{wind_seed}_g{terrain_seed}_t{traj_seed}.png",
+        help="Output path for 4-device offloading heatmap. Supports {wind_seed}/{terrain_seed}/{traj_seed} placeholders.",
     )
     parser.add_argument(
         "--show",
@@ -106,7 +107,14 @@ def build_agents_and_env():
     return env, agent, offload_agent
 
 
-def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_targets, output_path, wind_seed, traj_seed):
+def save_offloading_heatmap_by_device(
+    offload_heatmaps_by_target,
+    offload_targets,
+    output_path,
+    wind_seed,
+    terrain_seed,
+    traj_seed,
+):
     title_fs = 24
     axis_label_fs = 20
     tick_fs = 16
@@ -126,7 +134,7 @@ def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_target
             origin="lower",
             interpolation="nearest",
         )
-        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, t={traj_seed})", fontsize=title_fs)
+        ax.set_title(f"{offload_targets[idx]} (w={wind_seed}, g={terrain_seed}, t={traj_seed})", fontsize=title_fs)
         ax.set_xlabel("Grid X", fontsize=axis_label_fs)
         ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
         ax.tick_params(axis="both", labelsize=tick_fs)
@@ -138,7 +146,7 @@ def save_offloading_heatmap_by_device(offload_heatmaps_by_target, offload_target
         cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, traj={traj_seed}]",
+        f"Offloading Heatmaps by Device (BS/HAPS/LEO/CE) [wind={wind_seed}, terrain={terrain_seed}, traj={traj_seed}]",
         y=0.98,
         fontsize=suptitle_fs,
     )
@@ -152,16 +160,18 @@ def main():
     configure_display(args.show)
 
     # Resolve dual seeds with backward compatibility.
-    if args.wind_seed is None and args.traj_seed is None:
+    if args.wind_seed is None and args.terrain_seed is None and args.traj_seed is None:
         if args.seed is None:
-            raise ValueError("Please provide --wind-seed and --traj-seed, or legacy --seed.")
+            raise ValueError("Please provide seeds (--wind-seed/--terrain-seed/--traj-seed) or legacy --seed.")
         wind_seed = args.seed
+        terrain_seed = args.seed
         traj_seed = args.seed
     else:
         wind_seed = args.wind_seed if args.wind_seed is not None else args.seed
+        terrain_seed = args.terrain_seed if args.terrain_seed is not None else args.seed
         traj_seed = args.traj_seed if args.traj_seed is not None else args.seed
-        if wind_seed is None or traj_seed is None:
-            raise ValueError("Both wind_seed and traj_seed must be resolved.")
+        if wind_seed is None or terrain_seed is None or traj_seed is None:
+            raise ValueError("wind_seed, terrain_seed and traj_seed must all be resolved.")
 
     env, agent, offload_agent = build_agents_and_env()
     # Keep timing consistent with seed-search: set trajectory seed right before rollout.
@@ -173,10 +183,15 @@ def main():
         seed=traj_seed,
         return_stats=True,
         wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
         traj_seed=traj_seed,
     )
 
-    output_path = args.heatmap_path.format(wind_seed=wind_seed, traj_seed=traj_seed)
+    output_path = args.heatmap_path.format(
+        wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
+        traj_seed=traj_seed,
+    )
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -186,10 +201,12 @@ def main():
         stats["offload_targets"],
         output_path,
         wind_seed,
+        terrain_seed,
         traj_seed,
     )
 
     print(f"Replay wind_seed: {wind_seed}")
+    print(f"Replay terrain_seed: {terrain_seed}")
     print(f"Replay traj_seed: {traj_seed}")
     print(f"Visualization shown: {args.show}")
     print(f"Average uncertainty: {float(stats['avg_uncertainty']):.6f}")

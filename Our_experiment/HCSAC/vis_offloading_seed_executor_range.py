@@ -38,6 +38,12 @@ def parse_args():
         help="Directly set one wind seed. If omitted, representative seed will be taken from --wind-class in catalog.",
     )
     parser.add_argument(
+        "--terrain-seed",
+        type=int,
+        default=None,
+        help="Seed controlling terrain difficulty map generation. Default follows wind seed.",
+    )
+    parser.add_argument(
         "--wind-class",
         type=str,
         default="Moderate Wind",
@@ -55,14 +61,33 @@ def parse_args():
     parser.add_argument(
         "--heatmap-path",
         type=str,
-        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_t{start}_{end}.png",
-        help="Output heatmap path. Supports {wind_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.png",
+        help="Output heatmap path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
     )
     parser.add_argument(
         "--report-path",
         type=str,
-        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_t{start}_{end}.md",
-        help="Output report path. Supports {wind_seed}/{start}/{end} placeholders.",
+        default="Our_experiment/HCSAC/data/offloading_frequency_w{wind_seed}_g{terrain_seed}_t{start}_{end}.md",
+        help="Output report path. Supports {wind_seed}/{terrain_seed}/{start}/{end} placeholders.",
+    )
+    parser.add_argument(
+        "--offload-metric",
+        type=str,
+        default="count",
+        choices=["count", "frequency"],
+        help="Aggregation metric for offloading heatmaps: raw count or normalized frequency.",
+    )
+    parser.add_argument(
+        "--terrain-map-path",
+        type=str,
+        default="Our_experiment/HCSAC/data/terrain_difficulty_w{wind_seed}_g{terrain_seed}.png",
+        help="Output terrain difficulty map path. Supports {wind_seed}/{terrain_seed} placeholders.",
+    )
+    parser.add_argument(
+        "--wind-map-path",
+        type=str,
+        default="Our_experiment/HCSAC/data/wind_field_w{wind_seed}_g{terrain_seed}.png",
+        help="Output wind field map path. Supports {wind_seed}/{terrain_seed} placeholders.",
     )
     return parser.parse_args()
 
@@ -145,28 +170,48 @@ def top_k_cells(freq_map, k=5):
     return result
 
 
-def generate_commentary(freq_maps_by_device, wind_seed, wind_label, traj_seed_start, traj_seed_end):
+def generate_commentary(
+    freq_maps_by_device,
+    wind_seed,
+    terrain_seed,
+    wind_label,
+    traj_seed_start,
+    traj_seed_end,
+    metric,
+):
     device_labels = ["BS", "HAPS", "LEO", "CE"]
     lines = []
     lines.append("# Offloading Frequency Commentary")
     lines.append("")
     lines.append(f"- Wind seed: `{wind_seed}`")
+    lines.append(f"- Terrain seed: `{terrain_seed}`")
     lines.append(f"- Wind label: `{wind_label}`")
     lines.append(f"- Trajectory seed range: `{traj_seed_start}`-`{traj_seed_end}`")
     lines.append("")
 
-    lines.append("## Top Hotspot Cells by Device (Top-5 Frequency)")
+    metric_name = "Count" if metric == "count" else "Frequency"
+    lines.append(f"## Top Hotspot Cells by Device (Top-5 {metric_name})")
     lines.append("")
     for i, dev in enumerate(device_labels):
         lines.append(f"### {dev}")
         for x, y, v in top_k_cells(freq_maps_by_device[i], k=5):
-            lines.append(f"- cell ({x}, {y}): frequency `{v:.6f}`")
+            if metric == "count":
+                lines.append(f"- cell ({x}, {y}): count `{int(round(v))}`")
+            else:
+                lines.append(f"- cell ({x}, {y}): frequency `{v:.6f}`")
         lines.append("")
 
     return "\n".join(lines) + "\n"
 
 
-def save_offloading_frequency_heatmap(freq_maps_by_device, output_path, wind_seed, wind_label):
+def save_offloading_frequency_heatmap(
+    freq_maps_by_device,
+    output_path,
+    wind_seed,
+    terrain_seed,
+    wind_label,
+    metric,
+):
     # Match typography with vis_offloading_visit_frequency_by_wind_class.py
     title_fs = 24
     axis_label_fs = 20
@@ -201,11 +246,102 @@ def save_offloading_frequency_heatmap(freq_maps_by_device, output_path, wind_see
     # Dedicated right-side colorbar axis to avoid overlap
     cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
     cbar = fig.colorbar(mappable, cax=cbar_ax)
-    cbar.set_label("Offloading Frequency", fontsize=cbar_label_fs, labelpad=14)
+    cbar_label = "Offloading Count" if metric == "count" else "Offloading Frequency"
+    cbar.set_label(cbar_label, fontsize=cbar_label_fs, labelpad=14)
     cbar.ax.tick_params(labelsize=cbar_tick_fs)
 
     fig.suptitle(
-        f"Offloading Frequency by Device (wind_seed={wind_seed}, {wind_label})",
+        f"Offloading {('Count' if metric == 'count' else 'Frequency')} by Device "
+        f"(wind_seed={wind_seed}, terrain_seed={terrain_seed}, {wind_label})",
+        fontsize=suptitle_fs,
+        y=0.98,
+    )
+    plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.95])
+    plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
+    plt.close()
+
+
+def save_terrain_difficulty_map(task_matrix, output_path, wind_seed, terrain_seed):
+    title_fs = 24
+    axis_label_fs = 20
+    tick_fs = 16
+    suptitle_fs = 28
+    cbar_label_fs = 20
+    cbar_tick_fs = 16
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    mappable = ax.imshow(
+        task_matrix.T,
+        cmap="YlOrRd",
+        origin="lower",
+        interpolation="nearest",
+        vmin=1,
+        vmax=4,
+    )
+    ax.set_title("Terrain Difficulty", fontsize=title_fs)
+    ax.set_xlabel("Grid X", fontsize=axis_label_fs)
+    ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
+    ax.tick_params(axis="both", labelsize=tick_fs)
+
+    cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
+    cbar = fig.colorbar(mappable, cax=cbar_ax)
+    cbar.set_label("Difficulty (1-4)", fontsize=cbar_label_fs, labelpad=14)
+    cbar.ax.tick_params(labelsize=cbar_tick_fs)
+
+    fig.suptitle(
+        f"Terrain Difficulty Map (wind_seed={wind_seed}, terrain_seed={terrain_seed})",
+        fontsize=suptitle_fs,
+        y=0.98,
+    )
+    plt.tight_layout(rect=[0.0, 0.0, 0.90, 0.95])
+    plt.savefig(output_path, dpi=220, bbox_inches="tight", pad_inches=0.1)
+    plt.close()
+
+
+def save_wind_field_map(wind_u, wind_v, output_path, wind_seed, terrain_seed):
+    title_fs = 24
+    axis_label_fs = 20
+    tick_fs = 16
+    suptitle_fs = 28
+    cbar_label_fs = 20
+    cbar_tick_fs = 16
+
+    speed = np.sqrt(wind_u ** 2 + wind_v ** 2)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    mappable = ax.imshow(
+        speed.T,
+        cmap="Blues",
+        origin="lower",
+        interpolation="nearest",
+    )
+
+    # Overlay wind direction vectors.
+    grid_x = np.arange(wind_u.shape[0])
+    grid_y = np.arange(wind_u.shape[1])
+    X, Y = np.meshgrid(grid_x, grid_y, indexing="xy")
+    ax.quiver(
+        X,
+        Y,
+        wind_u.T,
+        wind_v.T,
+        color="black",
+        scale=80,
+        width=0.0025,
+        alpha=0.6,
+    )
+
+    ax.set_title("Wind Field", fontsize=title_fs)
+    ax.set_xlabel("Grid X", fontsize=axis_label_fs)
+    ax.set_ylabel("Grid Y", fontsize=axis_label_fs)
+    ax.tick_params(axis="both", labelsize=tick_fs)
+
+    cbar_ax = fig.add_axes([0.92, 0.13, 0.024, 0.74])
+    cbar = fig.colorbar(mappable, cax=cbar_ax)
+    cbar.set_label("Wind Speed", fontsize=cbar_label_fs, labelpad=14)
+    cbar.ax.tick_params(labelsize=cbar_tick_fs)
+
+    fig.suptitle(
+        f"Wind Field Map (wind_seed={wind_seed}, terrain_seed={terrain_seed})",
         fontsize=suptitle_fs,
         y=0.98,
     )
@@ -221,9 +357,19 @@ def main():
 
     reps = load_wind_representatives(args.wind_catalog_json)
     wind_seed = int(args.wind_seed) if args.wind_seed is not None else int(reps[args.wind_class])
+    terrain_seed = int(args.terrain_seed) if args.terrain_seed is not None else wind_seed
     wind_label = args.wind_class if args.wind_seed is None else "Custom Wind Seed"
 
     env, agent, offload_agent = build_agents_and_env()
+
+    # Before rollouts: output terrain difficulty map and wind field map.
+    env.reset(seed=0, wind_seed=wind_seed, terrain_seed=terrain_seed)
+    terrain_map_path = args.terrain_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed)
+    wind_map_path = args.wind_map_path.format(wind_seed=wind_seed, terrain_seed=terrain_seed)
+    os.makedirs(os.path.dirname(terrain_map_path), exist_ok=True)
+    os.makedirs(os.path.dirname(wind_map_path), exist_ok=True)
+    save_terrain_difficulty_map(env.task_matrix.astype(np.float64), terrain_map_path, wind_seed, terrain_seed)
+    save_wind_field_map(env.wind_u.astype(np.float64), env.wind_v.astype(np.float64), wind_map_path, wind_seed, terrain_seed)
 
     # Device order from env: [L, BS, HAPS, LEO, CE], we only keep 4 offloading devices [BS,HAPS,LEO,CE]
     offload_sum_by_device = None  # shape: [4, grid_x, grid_y]
@@ -238,6 +384,7 @@ def main():
             seed=traj_seed,
             return_stats=True,
             wind_seed=wind_seed,
+            terrain_seed=terrain_seed,
             traj_seed=traj_seed,
         )
 
@@ -250,27 +397,49 @@ def main():
         offload_sum_by_device += heatmaps_devices
         uncertainty_list.append(float(stats["avg_uncertainty"]))
 
-    # Normalize per device so each device heatmap is a spatial frequency distribution.
-    freq_maps_by_device = np.zeros_like(offload_sum_by_device, dtype=np.float64)
-    for i in range(offload_sum_by_device.shape[0]):
-        total_i = float(np.sum(offload_sum_by_device[i]))
-        if total_i > 0:
-            freq_maps_by_device[i] = offload_sum_by_device[i] / total_i
-        else:
-            freq_maps_by_device[i] = offload_sum_by_device[i]
+    # Use raw offloading counts by default; optional normalized frequency is still available.
+    if args.offload_metric == "count":
+        freq_maps_by_device = offload_sum_by_device.copy()
+    else:
+        freq_maps_by_device = np.zeros_like(offload_sum_by_device, dtype=np.float64)
+        for i in range(offload_sum_by_device.shape[0]):
+            total_i = float(np.sum(offload_sum_by_device[i]))
+            if total_i > 0:
+                freq_maps_by_device[i] = offload_sum_by_device[i] / total_i
+            else:
+                freq_maps_by_device[i] = offload_sum_by_device[i]
 
-    heatmap_path = args.heatmap_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
-    report_path = args.report_path.format(wind_seed=wind_seed, start=args.traj_seed_start, end=args.traj_seed_end)
+    heatmap_path = args.heatmap_path.format(
+        wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
+        start=args.traj_seed_start,
+        end=args.traj_seed_end,
+    )
+    report_path = args.report_path.format(
+        wind_seed=wind_seed,
+        terrain_seed=terrain_seed,
+        start=args.traj_seed_start,
+        end=args.traj_seed_end,
+    )
     os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
-    save_offloading_frequency_heatmap(freq_maps_by_device, heatmap_path, wind_seed, wind_label)
+    save_offloading_frequency_heatmap(
+        freq_maps_by_device,
+        heatmap_path,
+        wind_seed,
+        terrain_seed,
+        wind_label,
+        args.offload_metric,
+    )
     commentary = generate_commentary(
         freq_maps_by_device,
         wind_seed,
+        terrain_seed,
         wind_label,
         args.traj_seed_start,
         args.traj_seed_end,
+        args.offload_metric,
     )
 
     with open(report_path, "w", encoding="utf-8") as f:
@@ -280,8 +449,12 @@ def main():
     print("-" * 60)
     print("Offloading frequency analysis done.")
     print(f"Wind used: class={wind_label}, wind_seed={wind_seed}")
+    print(f"Terrain seed: {terrain_seed}")
     print(f"Trajectory seed range: {args.traj_seed_start}-{args.traj_seed_end}")
+    print(f"Offloading metric: {args.offload_metric}")
     print(f"Mean Average uncertainty: {mean_unc:.6f}")
+    print(f"Terrain map saved: {terrain_map_path}")
+    print(f"Wind field map saved: {wind_map_path}")
     print(f"Heatmap saved: {heatmap_path}")
     print(f"Commentary saved: {report_path}")
 

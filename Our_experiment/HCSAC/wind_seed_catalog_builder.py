@@ -51,22 +51,39 @@ def representative_seed(rows, class_name):
     return class_rows_sorted[len(class_rows_sorted) // 2]["seed"]
 
 
-def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
+def build_catalog(
+    num_seeds,
+    subregion_size,
+    csv_path,
+    json_path,
+    report_path,
+    terrain_seed_mode,
+    fixed_terrain_seed,
+    terrain_grid_size,
+):
     wind_json_path = find_wind_json_path()
 
     rows = []
     means = []
+    terrain_means = []
 
     for seed in range(num_seeds):
         random.seed(seed)
         np.random.seed(seed)
         u_sub, v_sub, start_x, start_y = extract_wind_subregion(wind_json_path, subregion_size=subregion_size)
         mean_speed = float(wind_speed_mean(u_sub, v_sub))
+        terrain_seed = seed if terrain_seed_mode == "match_wind" else fixed_terrain_seed
+        terrain_rng = np.random.default_rng(terrain_seed)
+        terrain_matrix = terrain_rng.integers(1, 5, size=(terrain_grid_size, terrain_grid_size))
+        terrain_mean = float(np.mean(terrain_matrix))
         means.append(mean_speed)
+        terrain_means.append(terrain_mean)
         rows.append(
             {
                 "seed": seed,
                 "wind_speed_mean": mean_speed,
+                "terrain_seed": int(terrain_seed),
+                "terrain_difficulty_mean": terrain_mean,
                 "start_x": int(start_x),
                 "start_y": int(start_y),
             }
@@ -87,7 +104,15 @@ def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["seed", "wind_speed_mean", "start_x", "start_y", "class"],
+            fieldnames=[
+                "seed",
+                "wind_speed_mean",
+                "terrain_seed",
+                "terrain_difficulty_mean",
+                "start_x",
+                "start_y",
+                "class",
+            ],
         )
         writer.writeheader()
         for row in rows:
@@ -101,6 +126,9 @@ def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
         "num_seeds": num_seeds,
         "subregion_size": subregion_size,
         "wind_json_path": wind_json_path,
+        "terrain_seed_mode": terrain_seed_mode,
+        "fixed_terrain_seed": fixed_terrain_seed if terrain_seed_mode == "fixed" else None,
+        "terrain_grid_size": terrain_grid_size,
         "thresholds": {"q1": q1, "q2": q2},
         "representative_seeds": reps,
         "class_to_seeds": class_to_seeds,
@@ -109,6 +137,8 @@ def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
             "global_std": float(np.std(means)),
             "min_mean_speed": float(np.min(means)),
             "max_mean_speed": float(np.max(means)),
+            "terrain_difficulty_mean_global": float(np.mean(terrain_means)),
+            "terrain_difficulty_std_global": float(np.std(terrain_means)),
         },
     }
 
@@ -121,6 +151,10 @@ def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
     lines.append(f"- Total seeds analyzed: `{num_seeds}`")
     lines.append(f"- Wind JSON path: `{wind_json_path}`")
     lines.append(f"- Subregion size: `{subregion_size}`")
+    lines.append(f"- Terrain seed mode: `{terrain_seed_mode}`")
+    if terrain_seed_mode == "fixed":
+        lines.append(f"- Fixed terrain seed: `{fixed_terrain_seed}`")
+    lines.append(f"- Terrain grid size: `{terrain_grid_size}`")
     lines.append(f"- Threshold q1 (Low/Moderate): `{q1:.6f}`")
     lines.append(f"- Threshold q2 (Moderate/Strong): `{q2:.6f}`")
     lines.append("")
@@ -140,6 +174,8 @@ def build_catalog(num_seeds, subregion_size, csv_path, json_path, report_path):
     lines.append(f"- Std wind speed: `{payload['summary']['global_std']:.6f}`")
     lines.append(f"- Min mean speed: `{payload['summary']['min_mean_speed']:.6f}`")
     lines.append(f"- Max mean speed: `{payload['summary']['max_mean_speed']:.6f}`")
+    lines.append(f"- Terrain mean difficulty: `{payload['summary']['terrain_difficulty_mean_global']:.6f}`")
+    lines.append(f"- Terrain difficulty std: `{payload['summary']['terrain_difficulty_std_global']:.6f}`")
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -153,6 +189,25 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Build wind seed catalog and split seeds into 3 wind classes.")
     parser.add_argument("--num-seeds", type=int, default=5000, help="Number of wind seeds to analyze.")
     parser.add_argument("--subregion-size", type=int, default=20, help="Wind subregion size.")
+    parser.add_argument(
+        "--terrain-seed-mode",
+        type=str,
+        default="match_wind",
+        choices=["match_wind", "fixed"],
+        help="How terrain seed is assigned for catalog records.",
+    )
+    parser.add_argument(
+        "--fixed-terrain-seed",
+        type=int,
+        default=0,
+        help="Terrain seed used when --terrain-seed-mode=fixed.",
+    )
+    parser.add_argument(
+        "--terrain-grid-size",
+        type=int,
+        default=20,
+        help="Grid size used to summarize terrain difficulty seed effect.",
+    )
     parser.add_argument(
         "--csv-path",
         type=str,
@@ -182,6 +237,9 @@ def main():
         csv_path=args.csv_path,
         json_path=args.json_path,
         report_path=args.report_path,
+        terrain_seed_mode=args.terrain_seed_mode,
+        fixed_terrain_seed=args.fixed_terrain_seed,
+        terrain_grid_size=args.terrain_grid_size,
     )
 
 

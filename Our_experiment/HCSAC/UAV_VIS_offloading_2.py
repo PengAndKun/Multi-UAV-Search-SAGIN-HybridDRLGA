@@ -15,6 +15,7 @@ def visualize_trajectory(
     return_stats=False,
     wind_seed=None,
     traj_seed=None,
+    terrain_seed=None,
 ):
     # 初始化 Pygame en: Initialize Pygame
     pygame.init()
@@ -175,12 +176,14 @@ def visualize_trajectory(
         # Backward compatible default: if not provided, both seeds follow legacy `seed`
         current_wind_seed = seed if wind_seed is None else wind_seed
         current_traj_seed = seed if traj_seed is None else traj_seed
+        current_terrain_seed = seed if terrain_seed is None else terrain_seed
 
-        # Wind/environment seed controls wind subregion and env random initialization
-        if current_wind_seed is not None:
-            random.seed(current_wind_seed)
-            np.random.seed(current_wind_seed)
-        reset_state = env.reset(seed=current_wind_seed)  # 重置环境 en: Reset the environment
+        # Wind seed controls wind subregion; terrain seed controls task/difficulty matrix.
+        reset_state = env.reset(
+            seed=seed,
+            wind_seed=current_wind_seed,
+            terrain_seed=current_terrain_seed,
+        )  # 重置环境 en: Reset the environment
         state = reset_state if reset_state is not None else env._get_obs()  # 获取初始状态 en: Get initial state
 
         # Trajectory seed controls stochastic action sampling
@@ -348,6 +351,7 @@ def visualize_trajectory(
                 "offload_heatmaps_by_target": offload_heatmaps_by_target.copy(),
                 "offload_targets": OFFLOAD_TARGETS.copy(),
                 "wind_seed": current_wind_seed,
+                "terrain_seed": current_terrain_seed,
                 "traj_seed": current_traj_seed,
                 "visit_count": visit_count.copy(),
                 "visit_count_by_uav": visit_count_by_uav.copy(),
