@@ -24,6 +24,10 @@ class UAVEnv:
         self.X = 1e4  # 搜索区域长度（米） en: Length of search area
         self.Y = 1e4  # 搜索区域宽度（米） en: Width of search area
         self.M = 1  # UAV的质量（kg） en: UAV mass
+        self.g = 9.81  # 重力加速度（m/s^2） en: Gravitational acceleration
+        self.rho_air = 1.225  # 空气密度（kg/m^3） en: Air density
+        self.rotor_disk_area = 0.32  # 总旋翼盘面积（m^2） en: Total rotor disk area
+        self.P_hover = (self.M * self.g) ** 1.5 / np.sqrt(2.0 * self.rho_air * self.rotor_disk_area)  # 悬停功率（W）
         self.L = 64  # 通道数量 en: Number of channels
         self.Lx, self.Ly = 20, 20  # 搜索区域的网格划分 (en: Grid size of search area)
         self.grid_cell_size_m = self.X / self.Lx  # 单格边长（米） en: Grid cell size in meters (500m for 20x20 over 10km)
@@ -162,6 +166,12 @@ class UAVEnv:
         V_u = np.linalg.norm(direction * (self.V/np.sqrt(2)) - wind_vector) # 无人机的速度向量（在风速的影响下） en: UAV speed vector (affected by wind speed)
         return V_u
 
+    def _flight_energy(self, speed, duration):
+        """按更新后的功耗模型计算飞行能耗 E=0.5*M*V^2*dt + P_hover*dt"""
+        # en: Flight energy by updated model E=0.5*M*V^2*dt + P_hover*dt.
+        flight_power = 0.5 * self.M * (float(speed) ** 2) + self.P_hover
+        return float(flight_power * float(duration))
+
     def step(self, actions):
         """根据给定的移动动作更新环境, action_index为0到7的整数，表示8个方向中的一个"""
         # en: Update the environment based on the given movement actions, action_index is an integer from 0 to 7, representing one of the 8 directions
@@ -204,7 +214,7 @@ class UAVEnv:
                     uav['position'] = new_position  # 更新位置 en: Update position
                 
             # 判断飞行产生的能耗（在风速的影响下）en: Calculate energy consumption during flight (affected by wind speed)
-            e = 0.5 * self.M * (V_u ** 2) * self.T
+            e = self._flight_energy(V_u, self.T)
             uav['energy'] -= e
 
             # 更新不确定度矩阵 en: Update uncertainty matrix
@@ -370,7 +380,7 @@ class UAVEnv:
         wind_vector = np.array([self.wind_u[x, y], self.wind_v[x, y]])
         V_u = self._get_real_v(np.array([0, 0]), wind_vector)  # 考虑风速影响的速度 en: Calculate the speed considering wind speed effect
         # 计算悬停到达目的地的能量消耗
-        hover_energy = 0.5 * self.M * (V_u ** 2) * self.T  # 悬停能量消耗 en: Hover energy consumption
+        hover_energy = self._flight_energy(V_u, self.T)  # 悬停能量消耗 en: Hover energy consumption
    
         if uav['position'] == uav['destination']:
             return hover_energy # 如果已经到达目的地，返回悬停能量 en: If already at the destination, return hover energy
@@ -388,7 +398,7 @@ class UAVEnv:
             wind_vector = np.array([self.wind_u[x, y], self.wind_v[x, y]])
             direction = home_pos - current_pos
             V_u = self._get_real_v(direction, wind_vector)  # 考虑风速影响的速度 en: Calculate the speed considering wind speed effect
-            return 0.5 * self.M * (V_u ** 2) * self.T + hover_energy  #标准走一步需要的能量 en: Standard energy required for one step
+            return self._flight_energy(V_u, self.T) + hover_energy  #标准走一步需要的能量 en: Standard energy required for one step
         
         # 如果距离较远，沿路径取若干点计算平均能耗 en: If the distance is far, take several points along the path to calculate average energy consumption
         total_energy = 0
@@ -403,7 +413,7 @@ class UAVEnv:
             # 计算考虑风速后的实际速度 en: Calculate actual speed considering wind speed
             V_u = self._get_real_v(direction, wind_vector)
             # 计算单步能耗并累加 en: Calculate step energy consumption and accumulate
-            step_energy = 0.5 * self.M * (V_u ** 2) * self.T  # 每一步的能耗 en: Energy consumption for each step
+            step_energy = self._flight_energy(V_u, self.T)  # 每一步的能耗 en: Energy consumption for each step
             total_energy += step_energy
         return total_energy + hover_energy  # 返回总能耗 en: Return total energy consumption
 
