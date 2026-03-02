@@ -31,9 +31,10 @@ def parse_args():
         "--seed-source",
         type=str,
         default="auto",
-        choices=["auto", "best-iteration", "all-iterations", "range"],
+        choices=["auto", "random-sample", "best-iteration", "all-iterations", "range"],
         help=(
-            "Trajectory seed source. auto: random mode -> best-iteration, otherwise -> range; "
+            "Trajectory seed source. auto -> random-sample (default random 10 seeds); "
+            "random-sample: sample trajectory seeds from a pool; "
             "best-iteration: use best.best_iteration_seed_set; "
             "all-iterations: flatten ga.iteration_sampled_traj_seeds; "
             "range: use traj-seed-start/end."
@@ -47,6 +48,43 @@ def parse_args():
     )
     parser.add_argument("--traj-seed-start", type=int, default=None, help="Override traj seed start.")
     parser.add_argument("--traj-seed-end", type=int, default=None, help="Override traj seed end.")
+    parser.add_argument(
+        "--traj-seed-pool-min",
+        type=int,
+        default=None,
+        help="Random-sample mode: trajectory seed pool min (inclusive).",
+    )
+    parser.add_argument(
+        "--traj-seed-pool-max",
+        type=int,
+        default=None,
+        help="Random-sample mode: trajectory seed pool max (inclusive).",
+    )
+    parser.add_argument(
+        "--traj-seed-sample-size",
+        type=int,
+        default=10,
+        help="Random-sample mode: sampled trajectory seed count.",
+    )
+    parser.add_argument(
+        "--traj-seed-sampler-seed",
+        type=int,
+        default=2026,
+        help="Random-sample mode: RNG seed for trajectory seed sampling.",
+    )
+    parser.add_argument(
+        "--sample-with-replacement",
+        dest="sample_with_replacement",
+        action="store_true",
+        help="Random-sample mode: sample trajectory seeds with replacement.",
+    )
+    parser.add_argument(
+        "--no-sample-with-replacement",
+        dest="sample_with_replacement",
+        action="store_false",
+        help="Random-sample mode: sample trajectory seeds without replacement.",
+    )
+    parser.set_defaults(sample_with_replacement=None)
     parser.add_argument(
         "--heatmap-path",
         type=str,
@@ -92,7 +130,41 @@ def select_traj_seeds(ga_result, args):
     result_seeds = ga_result.get("seeds", {})
     source = args.seed_source
     if source == "auto":
-        source = "best-iteration" if result_seeds.get("traj_seed_mode") == "random_per_iteration" else "range"
+        source = "random-sample"
+
+    if source == "random-sample":
+        pool_min = (
+            int(args.traj_seed_pool_min)
+            if args.traj_seed_pool_min is not None
+            else int(result_seeds.get("traj_seed_pool_min", result_seeds.get("traj_seed_start", 0)))
+        )
+        pool_max = (
+            int(args.traj_seed_pool_max)
+            if args.traj_seed_pool_max is not None
+            else int(result_seeds.get("traj_seed_pool_max", result_seeds.get("traj_seed_end", 200)))
+        )
+        sample_size = int(args.traj_seed_sample_size)
+        if sample_size < 1:
+            raise ValueError("traj-seed-sample-size must be >= 1")
+        if pool_max < pool_min:
+            raise ValueError("traj-seed-pool-max must be >= traj-seed-pool-min")
+        pool = np.arange(pool_min, pool_max + 1, dtype=np.int64)
+        if len(pool) == 0:
+            raise ValueError("trajectory seed pool is empty.")
+
+        if args.sample_with_replacement is None:
+            replace = bool(result_seeds.get("sample_with_replacement", False)) or sample_size > len(pool)
+        else:
+            replace = bool(args.sample_with_replacement) or sample_size > len(pool)
+
+        rng = np.random.default_rng(int(args.traj_seed_sampler_seed))
+        sampled = rng.choice(pool, size=sample_size, replace=replace)
+        traj_seeds = [int(s) for s in sampled.tolist()]
+        source_desc = (
+            f"random(pool={pool_min}-{pool_max}, "
+            f"n={sample_size}, replace={replace}, seed={int(args.traj_seed_sampler_seed)})"
+        )
+        return traj_seeds, source_desc, f"random{sample_size}_s{int(args.traj_seed_sampler_seed)}"
 
     if source == "best-iteration":
         best_set = ga_result.get("best", {}).get("best_iteration_seed_set", [])
