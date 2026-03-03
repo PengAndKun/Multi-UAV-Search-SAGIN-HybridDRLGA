@@ -1,0 +1,1469 @@
+{
+  "created_at": "2026-03-02T17:37:34Z",
+  "summary_type": "uav_count_three_group_comparison",
+  "groups": [
+    {
+      "group_id": "ga_offloading",
+      "group_label": "GA + Offloading"
+    },
+    {
+      "group_id": "ga_no_offloading",
+      "group_label": "GA + No Offloading"
+    },
+    {
+      "group_id": "no_ga_offloading",
+      "group_label": "No-GA + Offloading"
+    }
+  ],
+  "config": {
+    "uav_counts": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "infra_seed": 999999,
+    "terrain_seed": 10,
+    "wind_seed": 4800,
+    "ga_search": {
+      "traj_seed_min": 0,
+      "traj_seed_max": 200,
+      "traj_seed_sample_size": 10,
+      "sample_with_replacement": false,
+      "iterations": 20,
+      "population_size": 12,
+      "repetitions": 1,
+      "mutation_rate": 0.1,
+      "ga_seed": 2026
+    },
+    "evaluation": {
+      "eval_traj_seed_pool_min": 0,
+      "eval_traj_seed_pool_max": 200,
+      "eval_traj_seed_sample_size": 10,
+      "eval_traj_seed_sampler_seed": 2026,
+      "eval_sample_with_replacement": false,
+      "eval_replace_used": false,
+      "eval_traj_seeds": [
+        5,
+        200,
+        34,
+        124,
+        163,
+        71,
+        15,
+        92,
+        73,
+        128
+      ],
+      "eval_repetitions": 1,
+      "num_eval_traj_seeds": 10
+    },
+    "total_elapsed_sec": 17794.12354874611
+  },
+  "per_uav_count_results": [
+    {
+      "num_uav": 1,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 807.0797457695007,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.8352499999999999,
+            "best_run_traj_seed": 195,
+            "best_step_count": 67,
+            "best_iteration_seed_set": [
+              139,
+              89,
+              171,
+              12,
+              142,
+              188,
+              195,
+              128,
+              42,
+              169
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                10,
+                1
+              ],
+              [
+                1,
+                9
+              ]
+            ],
+            "start_positions": [
+              [
+                10,
+                1
+              ]
+            ],
+            "end_positions": [
+              [
+                1,
+                9
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.8387500000000001,
+            "std_average_uncertainty": 0.004366062299143247,
+            "mean_uav_lifetime_steps": 63.6,
+            "std_uav_lifetime_steps": 1.8000000000000003,
+            "mean_uav_lifetime_seconds": 2248.599564173221,
+            "std_uav_lifetime_seconds": 63.63961030678938,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 16.12499999999999,
+            "std_coverage_percent": 0.4366062299143247
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 506.09304094314575,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.8472500000000001,
+            "best_run_traj_seed": 0,
+            "best_step_count": 63,
+            "best_iteration_seed_set": [
+              80,
+              195,
+              137,
+              15,
+              0,
+              198,
+              52,
+              62,
+              81,
+              173
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                10,
+                1
+              ],
+              [
+                0,
+                10
+              ]
+            ],
+            "start_positions": [
+              [
+                10,
+                1
+              ]
+            ],
+            "end_positions": [
+              [
+                0,
+                10
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.8515,
+            "std_average_uncertainty": 0.0035707142142714188,
+            "mean_uav_lifetime_steps": 58.4,
+            "std_uav_lifetime_steps": 1.42828568570857,
+            "mean_uav_lifetime_seconds": 2064.751801064719,
+            "std_uav_lifetime_seconds": 50.497524691810355,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 14.849999999999996,
+            "std_coverage_percent": 0.3570714214271419
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 37.6579966545105,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.8845000000000001,
+            "std_average_uncertainty": 0.008500000000000002,
+            "mean_uav_lifetime_steps": 45.2,
+            "std_uav_lifetime_steps": 3.4000000000000004,
+            "mean_uav_lifetime_seconds": 1598.0613254815976,
+            "std_uav_lifetime_seconds": 120.20815280171307,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 11.549999999999994,
+            "std_coverage_percent": 0.8500000000000002
+          }
+        }
+      }
+    },
+    {
+      "num_uav": 2,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 1182.0117535591125,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.6697500000000001,
+            "best_run_traj_seed": 46,
+            "best_step_count": 71,
+            "best_iteration_seed_set": [
+              13,
+              180,
+              127,
+              195,
+              153,
+              154,
+              14,
+              106,
+              120,
+              46
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                6,
+                0
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                17,
+                16
+              ]
+            ],
+            "start_positions": [
+              [
+                6,
+                0
+              ],
+              [
+                13,
+                3
+              ]
+            ],
+            "end_positions": [
+              [
+                3,
+                17
+              ],
+              [
+                17,
+                16
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.67525,
+            "std_average_uncertainty": 0.018284214503226537,
+            "mean_uav_lifetime_steps": 65.15,
+            "std_uav_lifetime_steps": 3.8278584090846413,
+            "mean_uav_lifetime_seconds": 2303.4003397151782,
+            "std_uav_lifetime_seconds": 135.33523192428504,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 32.475,
+            "std_coverage_percent": 1.8284214503226537
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 767.187216758728,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.7032499999999999,
+            "best_run_traj_seed": 112,
+            "best_step_count": 61,
+            "best_iteration_seed_set": [
+              188,
+              14,
+              33,
+              110,
+              135,
+              6,
+              64,
+              87,
+              186,
+              112
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                10,
+                5
+              ],
+              [
+                12,
+                3
+              ],
+              [
+                1,
+                7
+              ],
+              [
+                0,
+                10
+              ]
+            ],
+            "start_positions": [
+              [
+                10,
+                5
+              ],
+              [
+                12,
+                3
+              ]
+            ],
+            "end_positions": [
+              [
+                1,
+                7
+              ],
+              [
+                0,
+                10
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.7187499999999999,
+            "std_average_uncertainty": 0.011138334704972731,
+            "mean_uav_lifetime_steps": 55.45,
+            "std_uav_lifetime_steps": 2.126617031813674,
+            "mean_uav_lifetime_seconds": 1960.4535508397032,
+            "std_uav_lifetime_seconds": 75.18726620911285,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 28.12500000000001,
+            "std_coverage_percent": 1.113833470497273
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 40.46353101730347,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.73175,
+            "std_average_uncertainty": 0.0067128607910487805,
+            "mean_uav_lifetime_steps": 52.85,
+            "std_uav_lifetime_steps": 1.1412712210513327,
+            "mean_uav_lifetime_seconds": 1868.5296692854522,
+            "std_uav_lifetime_seconds": 40.350030978922454,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 26.825,
+            "std_coverage_percent": 0.671286079104878
+          }
+        }
+      }
+    },
+    {
+      "num_uav": 3,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 1547.0293538570404,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.49524999999999986,
+            "best_run_traj_seed": 55,
+            "best_step_count": 72,
+            "best_iteration_seed_set": [
+              43,
+              143,
+              162,
+              139,
+              34,
+              137,
+              55,
+              26,
+              166,
+              193
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                10,
+                5
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                11,
+                1
+              ],
+              [
+                3,
+                19
+              ],
+              [
+                3,
+                13
+              ],
+              [
+                15,
+                14
+              ]
+            ],
+            "start_positions": [
+              [
+                10,
+                5
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                11,
+                1
+              ]
+            ],
+            "end_positions": [
+              [
+                3,
+                19
+              ],
+              [
+                3,
+                13
+              ],
+              [
+                15,
+                14
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.5105000000000001,
+            "std_average_uncertainty": 0.020940391591371933,
+            "mean_uav_lifetime_steps": 65.63333333333333,
+            "std_uav_lifetime_steps": 2.9038288899696254,
+            "mean_uav_lifetime_seconds": 2320.4887535938533,
+            "std_uav_lifetime_seconds": 102.66585497514642,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 48.949999999999996,
+            "std_coverage_percent": 2.094039159137193
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 1044.2517936229706,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.5642499999999999,
+            "best_run_traj_seed": 128,
+            "best_step_count": 64,
+            "best_iteration_seed_set": [
+              139,
+              89,
+              171,
+              12,
+              142,
+              188,
+              195,
+              128,
+              42,
+              169
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                17,
+                2
+              ],
+              [
+                12,
+                3
+              ],
+              [
+                17,
+                5
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                2,
+                9
+              ],
+              [
+                12,
+                12
+              ]
+            ],
+            "start_positions": [
+              [
+                17,
+                2
+              ],
+              [
+                12,
+                3
+              ],
+              [
+                17,
+                5
+              ]
+            ],
+            "end_positions": [
+              [
+                3,
+                17
+              ],
+              [
+                2,
+                9
+              ],
+              [
+                12,
+                12
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.5742499999999999,
+            "std_average_uncertainty": 0.007335700375560595,
+            "mean_uav_lifetime_steps": 57.366666666666674,
+            "std_uav_lifetime_steps": 0.7810249675906648,
+            "mean_uav_lifetime_seconds": 2028.2179507034139,
+            "std_uav_lifetime_seconds": 27.613402542968153,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 42.57500000000001,
+            "std_coverage_percent": 0.7335700375560595
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 41.89526963233948,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.6104999999999999,
+            "std_average_uncertainty": 0.01422146265332788,
+            "mean_uav_lifetime_steps": 51.3,
+            "std_uav_lifetime_steps": 1.81628436344337,
+            "mean_uav_lifetime_seconds": 1813.7288937434944,
+            "std_uav_lifetime_seconds": 64.21534949769497,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 38.95000000000001,
+            "std_coverage_percent": 1.422146265332788
+          }
+        }
+      }
+    },
+    {
+      "num_uav": 4,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 1918.3372070789337,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.34725,
+            "best_run_traj_seed": 28,
+            "best_step_count": 72,
+            "best_iteration_seed_set": [
+              158,
+              9,
+              28,
+              132,
+              131,
+              48,
+              25,
+              113,
+              46,
+              54
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                13,
+                2
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                10,
+                10
+              ],
+              [
+                10,
+                9
+              ],
+              [
+                1,
+                16
+              ],
+              [
+                5,
+                13
+              ],
+              [
+                0,
+                19
+              ]
+            ],
+            "start_positions": [
+              [
+                13,
+                2
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                10,
+                10
+              ]
+            ],
+            "end_positions": [
+              [
+                10,
+                9
+              ],
+              [
+                1,
+                16
+              ],
+              [
+                5,
+                13
+              ],
+              [
+                0,
+                19
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.3549999999999999,
+            "std_average_uncertainty": 0.032287768581925884,
+            "mean_uav_lifetime_steps": 67.125,
+            "std_uav_lifetime_steps": 2.704741207583454,
+            "mean_uav_lifetime_seconds": 2373.2271343573498,
+            "std_uav_lifetime_seconds": 95.62704246184757,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 64.5,
+            "std_coverage_percent": 3.2287768581925884
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 1352.4282035827637,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.41500000000000004,
+            "best_run_traj_seed": 48,
+            "best_step_count": 63,
+            "best_iteration_seed_set": [
+              158,
+              9,
+              28,
+              132,
+              131,
+              48,
+              25,
+              113,
+              46,
+              54
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                17,
+                2
+              ],
+              [
+                14,
+                0
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                11,
+                5
+              ],
+              [
+                0,
+                11
+              ],
+              [
+                2,
+                14
+              ],
+              [
+                2,
+                12
+              ],
+              [
+                0,
+                10
+              ]
+            ],
+            "start_positions": [
+              [
+                17,
+                2
+              ],
+              [
+                14,
+                0
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                11,
+                5
+              ]
+            ],
+            "end_positions": [
+              [
+                0,
+                11
+              ],
+              [
+                2,
+                14
+              ],
+              [
+                2,
+                12
+              ],
+              [
+                0,
+                10
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.41950000000000004,
+            "std_average_uncertainty": 0.010476163419878474,
+            "mean_uav_lifetime_steps": 59.375,
+            "std_uav_lifetime_steps": 1.3287682265918312,
+            "mean_uav_lifetime_seconds": 2099.2232566475627,
+            "std_uav_lifetime_seconds": 46.97905118241536,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 58.050000000000004,
+            "std_coverage_percent": 1.0476163419878475
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 43.860127210617065,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.47325,
+            "std_average_uncertainty": 0.016735067971179556,
+            "mean_uav_lifetime_steps": 53.425,
+            "std_uav_lifetime_steps": 1.7140959716421948,
+            "mean_uav_lifetime_seconds": 1888.8589892445648,
+            "std_uav_lifetime_seconds": 60.602444257636996,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 52.675000000000004,
+            "std_coverage_percent": 1.6735067971179556
+          }
+        }
+      }
+    },
+    {
+      "num_uav": 5,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 2224.1791410446167,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.24,
+            "best_run_traj_seed": 42,
+            "best_step_count": 71,
+            "best_iteration_seed_set": [
+              139,
+              89,
+              171,
+              12,
+              142,
+              188,
+              195,
+              128,
+              42,
+              169
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                11,
+                1
+              ],
+              [
+                12,
+                6
+              ],
+              [
+                18,
+                0
+              ],
+              [
+                10,
+                5
+              ],
+              [
+                13,
+                1
+              ],
+              [
+                12,
+                15
+              ],
+              [
+                5,
+                15
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                13,
+                12
+              ]
+            ],
+            "start_positions": [
+              [
+                11,
+                1
+              ],
+              [
+                12,
+                6
+              ],
+              [
+                18,
+                0
+              ],
+              [
+                10,
+                5
+              ],
+              [
+                13,
+                1
+              ]
+            ],
+            "end_positions": [
+              [
+                12,
+                15
+              ],
+              [
+                5,
+                15
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                13,
+                12
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.24975,
+            "std_average_uncertainty": 0.035924399786217726,
+            "mean_uav_lifetime_steps": 64.66,
+            "std_uav_lifetime_steps": 1.6805951326836595,
+            "mean_uav_lifetime_seconds": 2286.0762235761085,
+            "std_uav_lifetime_seconds": 59.41801073748602,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 75.02499999999999,
+            "std_coverage_percent": 3.5924399786217727
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 1582.560958623886,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.31425000000000003,
+            "best_run_traj_seed": 43,
+            "best_step_count": 61,
+            "best_iteration_seed_set": [
+              43,
+              143,
+              162,
+              139,
+              34,
+              137,
+              55,
+              26,
+              166,
+              193
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                5,
+                5
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                16,
+                0
+              ],
+              [
+                13,
+                5
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                10,
+                17
+              ],
+              [
+                5,
+                15
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                10,
+                18
+              ]
+            ],
+            "start_positions": [
+              [
+                5,
+                5
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                16,
+                0
+              ],
+              [
+                13,
+                5
+              ],
+              [
+                17,
+                1
+              ]
+            ],
+            "end_positions": [
+              [
+                10,
+                17
+              ],
+              [
+                5,
+                15
+              ],
+              [
+                3,
+                17
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                10,
+                18
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.32125000000000004,
+            "std_average_uncertainty": 0.01266145726210061,
+            "mean_uav_lifetime_steps": 57.98,
+            "std_uav_lifetime_steps": 1.1435033887138248,
+            "mean_uav_lifetime_seconds": 2049.9025586598013,
+            "std_uav_lifetime_seconds": 40.42895002346703,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 67.875,
+            "std_coverage_percent": 1.266145726210061
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 45.21765851974487,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.36825,
+            "std_average_uncertainty": 0.024006509533874357,
+            "mean_uav_lifetime_steps": 52.959999999999994,
+            "std_uav_lifetime_steps": 2.4327761919255946,
+            "mean_uav_lifetime_seconds": 1872.418756581978,
+            "std_uav_lifetime_seconds": 86.01162712098865,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 63.175000000000004,
+            "std_coverage_percent": 2.400650953387436
+          }
+        }
+      }
+    },
+    {
+      "num_uav": 6,
+      "groups": {
+        "ga_offloading": {
+          "group_id": "ga_offloading",
+          "group_label": "GA + Offloading",
+          "search_elapsed_sec": 2666.040095090866,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.15275,
+            "best_run_traj_seed": 43,
+            "best_step_count": 71,
+            "best_iteration_seed_set": [
+              43,
+              143,
+              162,
+              139,
+              34,
+              137,
+              55,
+              26,
+              166,
+              193
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                17,
+                2
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                19,
+                0
+              ],
+              [
+                10,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                18,
+                18
+              ],
+              [
+                5,
+                8
+              ],
+              [
+                3,
+                13
+              ],
+              [
+                8,
+                7
+              ],
+              [
+                9,
+                4
+              ],
+              [
+                0,
+                11
+              ],
+              [
+                16,
+                19
+              ]
+            ],
+            "start_positions": [
+              [
+                17,
+                2
+              ],
+              [
+                13,
+                3
+              ],
+              [
+                19,
+                0
+              ],
+              [
+                10,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                18,
+                18
+              ]
+            ],
+            "end_positions": [
+              [
+                5,
+                8
+              ],
+              [
+                3,
+                13
+              ],
+              [
+                8,
+                7
+              ],
+              [
+                9,
+                4
+              ],
+              [
+                0,
+                11
+              ],
+              [
+                16,
+                19
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.179,
+            "std_average_uncertainty": 0.021130546609115442,
+            "mean_uav_lifetime_steps": 62.65,
+            "std_uav_lifetime_steps": 1.7833333333333332,
+            "mean_uav_lifetime_seconds": 2215.0119920668603,
+            "std_uav_lifetime_seconds": 63.050354655800476,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 82.1,
+            "std_coverage_percent": 2.113054660911544
+          }
+        },
+        "ga_no_offloading": {
+          "group_id": "ga_no_offloading",
+          "group_label": "GA + No Offloading",
+          "search_elapsed_sec": 1861.24423122406,
+          "search": {
+            "ga_objective_mean_average_uncertainty": 0.20025000000000004,
+            "best_run_traj_seed": 42,
+            "best_step_count": 62,
+            "best_iteration_seed_set": [
+              68,
+              188,
+              42,
+              132,
+              8,
+              0,
+              22,
+              19,
+              47,
+              72
+            ]
+          },
+          "best": {
+            "best_solution": [
+              [
+                16,
+                12
+              ],
+              [
+                11,
+                0
+              ],
+              [
+                18,
+                1
+              ],
+              [
+                10,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                5,
+                5
+              ],
+              [
+                2,
+                17
+              ],
+              [
+                11,
+                7
+              ],
+              [
+                4,
+                7
+              ],
+              [
+                5,
+                10
+              ],
+              [
+                15,
+                12
+              ],
+              [
+                2,
+                12
+              ]
+            ],
+            "start_positions": [
+              [
+                16,
+                12
+              ],
+              [
+                11,
+                0
+              ],
+              [
+                18,
+                1
+              ],
+              [
+                10,
+                3
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                5,
+                5
+              ]
+            ],
+            "end_positions": [
+              [
+                2,
+                17
+              ],
+              [
+                11,
+                7
+              ],
+              [
+                4,
+                7
+              ],
+              [
+                5,
+                10
+              ],
+              [
+                15,
+                12
+              ],
+              [
+                2,
+                12
+              ]
+            ]
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.21174999999999997,
+            "std_average_uncertainty": 0.018201991649267397,
+            "mean_uav_lifetime_steps": 57.06666666666666,
+            "std_uav_lifetime_steps": 1.0060925515191053,
+            "mean_uav_lifetime_seconds": 2017.6113489856155,
+            "std_uav_lifetime_seconds": 35.57074328402178,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 78.825,
+            "std_coverage_percent": 1.8201991649267397
+          }
+        },
+        "no_ga_offloading": {
+          "group_id": "no_ga_offloading",
+          "group_label": "No-GA + Offloading",
+          "search_elapsed_sec": 0.0,
+          "eval_elapsed_sec": 48.3993661403656,
+          "search": {
+            "ga_objective_mean_average_uncertainty": null,
+            "best_run_traj_seed": null,
+            "best_step_count": null,
+            "best_iteration_seed_set": []
+          },
+          "best": {
+            "best_solution": null,
+            "start_positions": null,
+            "end_positions": null
+          },
+          "metrics": {
+            "mean_average_uncertainty": 0.23425,
+            "std_average_uncertainty": 0.022804878863962427,
+            "mean_uav_lifetime_steps": 56.416666666666664,
+            "std_uav_lifetime_steps": 2.330057223903883,
+            "mean_uav_lifetime_seconds": 1994.6303785970529,
+            "std_uav_lifetime_seconds": 82.37996317875684,
+            "num_traj_seeds": 10,
+            "eval_repetitions": 1,
+            "num_eval_rollouts": 10,
+            "mean_coverage_percent": 76.57499999999999,
+            "std_coverage_percent": 2.2804878863962426
+          }
+        }
+      }
+    }
+  ],
+  "artifacts": {
+    "coverage_plot_path": "E:\\github\\Multi-UAV-Search-SAGIN-HybridDRLGA\\Our_experiment\\GA\\data\\ga_three_group_coverage_vs_uav_w4800_g10_i999999.png",
+    "uncertainty_plot_path": "E:\\github\\Multi-UAV-Search-SAGIN-HybridDRLGA\\Our_experiment\\GA\\data\\ga_three_group_uncertainty_vs_uav_w4800_g10_i999999.png"
+  }
+}
