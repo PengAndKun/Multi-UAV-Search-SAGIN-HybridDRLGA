@@ -5,6 +5,9 @@ import time
 
 import numpy as np
 
+# Headless defaults for environments that run without display/audio
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
@@ -20,6 +23,7 @@ from Our_experiment.GA.ga_vis_common import save_json
 from Our_experiment.GA.ga_vis_common import set_seed
 from Our_experiment.GA.ga_vis_common import utc_now_iso
 from Our_experiment.GA.ga_vis_common import validate_traj_range
+from Our_experiment.HCSAC.UAV_VIS_offloading_2 import visualize_trajectory as vis
 
 
 WIND_CLASS_MAP = {
@@ -32,8 +36,8 @@ WIND_CLASS_MAP = {
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Run and compare three GA deployment algorithms from scratch across wind classes. "
-            "The script reruns all algorithms, recomputes lifetime/uncertainty statistics, "
+            "Run and compare GA-based algorithms plus a No-GA baseline across wind classes. "
+            "The script reruns all algorithms, recomputes lifetime/uncertainty/coverage statistics, "
             "and writes a single comparison JSON."
         )
     )
@@ -59,7 +63,7 @@ def parse_args():
         action="store_true",
         help="Sample trajectory seeds with replacement during GA search.",
     )
-    parser.add_argument("--iterations", type=int, default=25, help="GA generation count for all algorithms.")
+    parser.add_argument("--iterations", type=int, default=20, help="GA generation count for all algorithms.")
     parser.add_argument("--population-size", type=int, default=12, help="GA population size for all algorithms.")
     parser.add_argument(
         "--repetitions",
@@ -157,6 +161,17 @@ def make_traj_seed_pool(cfg):
 
 def make_eval_traj_seeds(cfg):
     return list(range(cfg["eval_traj_seed_start"], cfg["eval_traj_seed_end"] + 1))
+
+
+def to_coverage_metrics(metrics):
+    metrics = dict(metrics)
+    mean_unc = float(metrics["mean_average_uncertainty"])
+    std_unc = float(metrics["std_average_uncertainty"])
+    metrics["mean_coverage"] = float(1.0 - mean_unc)
+    metrics["std_coverage"] = float(std_unc)
+    metrics["mean_coverage_percent"] = float((1.0 - mean_unc) * 100.0)
+    metrics["std_coverage_percent"] = float(std_unc * 100.0)
+    return metrics
 
 
 def rollout_full_rl_with_lifetime(
@@ -265,7 +280,7 @@ def evaluate_full_rl_offloading_solution(
     if len(uncertainty_values) == 0:
         raise RuntimeError("No evaluation rollouts were executed for the RL + offloading solution.")
 
-    return {
+    return to_coverage_metrics({
         "mean_average_uncertainty": float(np.mean(uncertainty_values)),
         "std_average_uncertainty": float(np.std(uncertainty_values)),
         "mean_uav_lifetime_steps": float(np.mean(lifetime_steps_values)),
@@ -275,7 +290,55 @@ def evaluate_full_rl_offloading_solution(
         "num_traj_seeds": int(len(eval_traj_seeds)),
         "eval_repetitions": int(eval_repetitions),
         "num_eval_rollouts": int(len(uncertainty_values)),
-    }
+    })
+
+
+def evaluate_no_ga_offloading(
+    env,
+    agent,
+    offload_agent,
+    wind_seed,
+    terrain_seed,
+    infra_seed,
+    eval_traj_seeds,
+    eval_repetitions,
+):
+    uncertainty_values = []
+    lifetime_steps_values = []
+    lifetime_seconds_values = []
+
+    for traj_seed in eval_traj_seeds:
+        for _ in range(eval_repetitions):
+            set_seed(int(traj_seed))
+            stats = vis(
+                agent,
+                offload_agent,
+                env,
+                seed=int(traj_seed),
+                return_stats=True,
+                wind_seed=int(wind_seed),
+                terrain_seed=int(terrain_seed),
+                traj_seed=int(traj_seed),
+                infra_seed=int(infra_seed),
+            )
+            uncertainty_values.append(float(stats["avg_uncertainty"]))
+            lifetime_steps_values.append(float(stats.get("avg_uav_lifetime_steps", np.nan)))
+            lifetime_seconds_values.append(float(stats.get("avg_uav_lifetime_seconds", np.nan)))
+
+    if len(uncertainty_values) == 0:
+        raise RuntimeError("No evaluation rollouts were executed for the No-GA baseline.")
+
+    return to_coverage_metrics({
+        "mean_average_uncertainty": float(np.mean(uncertainty_values)),
+        "std_average_uncertainty": float(np.std(uncertainty_values)),
+        "mean_uav_lifetime_steps": float(np.nanmean(lifetime_steps_values)),
+        "std_uav_lifetime_steps": float(np.nanstd(lifetime_steps_values)),
+        "mean_uav_lifetime_seconds": float(np.nanmean(lifetime_seconds_values)),
+        "std_uav_lifetime_seconds": float(np.nanstd(lifetime_seconds_values)),
+        "num_traj_seeds": int(len(eval_traj_seeds)),
+        "eval_repetitions": int(eval_repetitions),
+        "num_eval_rollouts": int(len(uncertainty_values)),
+    })
 
 
 def run_algorithm_rl_offloading(cfg, wind_seed):
@@ -335,6 +398,7 @@ def run_algorithm_rl_offloading(cfg, wind_seed):
     print(
         f"[{algorithm_label}] wind_seed={wind_seed} done. "
         f"Mean uncertainty={eval_metrics['mean_average_uncertainty']:.6f}, "
+        f"Coverage={eval_metrics['mean_coverage_percent']:.2f}%, "
         f"Mean lifetime={eval_metrics['mean_uav_lifetime_steps']:.2f} steps."
     )
 
@@ -403,7 +467,7 @@ def run_algorithm_no_offloading(cfg, wind_seed):
     if best_solution is None:
         raise RuntimeError(f"{algorithm_id} did not produce a valid best solution.")
 
-    eval_metrics = algo_no_offload.evaluate_solution_metrics(
+    eval_metrics = to_coverage_metrics(algo_no_offload.evaluate_solution_metrics(
         env=env,
         agent=agent,
         num_uav=cfg["num_uav"],
@@ -414,12 +478,13 @@ def run_algorithm_no_offloading(cfg, wind_seed):
         eval_traj_seeds=make_eval_traj_seeds(cfg),
         eval_repetitions=cfg["eval_repetitions"],
         ga_seed=cfg["ga_seed"],
-    )
+    ))
     starts, ends = algo_no_offload.split_chromosome(best_solution, cfg["num_uav"])
 
     print(
         f"[{algorithm_label}] wind_seed={wind_seed} done. "
         f"Mean uncertainty={eval_metrics['mean_average_uncertainty']:.6f}, "
+        f"Coverage={eval_metrics['mean_coverage_percent']:.2f}%, "
         f"Mean lifetime={eval_metrics['mean_uav_lifetime_steps']:.2f} steps."
     )
 
@@ -487,7 +552,7 @@ def run_algorithm_simple_greedy_offloading(cfg, wind_seed):
     if best_solution is None:
         raise RuntimeError(f"{algorithm_id} did not produce a valid best solution.")
 
-    eval_metrics = algo_simple_greedy_offload.evaluate_solution_metrics(
+    eval_metrics = to_coverage_metrics(algo_simple_greedy_offload.evaluate_solution_metrics(
         env=env,
         offload_agent=offload_agent,
         num_uav=cfg["num_uav"],
@@ -498,12 +563,13 @@ def run_algorithm_simple_greedy_offloading(cfg, wind_seed):
         eval_traj_seeds=make_eval_traj_seeds(cfg),
         eval_repetitions=cfg["eval_repetitions"],
         ga_seed=cfg["ga_seed"],
-    )
+    ))
     starts, ends = algo_simple_greedy_offload.split_chromosome(best_solution, cfg["num_uav"])
 
     print(
         f"[{algorithm_label}] wind_seed={wind_seed} done. "
         f"Mean uncertainty={eval_metrics['mean_average_uncertainty']:.6f}, "
+        f"Coverage={eval_metrics['mean_coverage_percent']:.2f}%, "
         f"Mean lifetime={eval_metrics['mean_uav_lifetime_steps']:.2f} steps."
     )
 
@@ -529,6 +595,61 @@ def run_algorithm_simple_greedy_offloading(cfg, wind_seed):
             "end_positions": [[int(p[0]), int(p[1])] for p in ends],
             "trajectory_actions": ga_result["trajectory_actions"],
             "offload_actions": ga_result["offload_actions"],
+        },
+        "metrics": eval_metrics,
+    }
+
+
+def run_algorithm_no_ga_offloading(cfg, wind_seed):
+    algorithm_id = "no_ga_drl_only_offloading"
+    algorithm_label = "No-GA (DRL-only)"
+    print("=" * 100)
+    print(f"[{algorithm_label}] wind_seed={wind_seed} ({wind_class_name(wind_seed)}) evaluation started.")
+
+    set_seed(cfg["ga_seed"])
+    env, agent, offload_agent = build_agents_and_env(num_uav=cfg["num_uav"])
+
+    t0 = time.time()
+    eval_metrics = evaluate_no_ga_offloading(
+        env=env,
+        agent=agent,
+        offload_agent=offload_agent,
+        wind_seed=int(wind_seed),
+        terrain_seed=cfg["terrain_seed"],
+        infra_seed=cfg["infra_seed"],
+        eval_traj_seeds=make_eval_traj_seeds(cfg),
+        eval_repetitions=cfg["eval_repetitions"],
+    )
+    eval_elapsed = float(time.time() - t0)
+
+    print(
+        f"[{algorithm_label}] wind_seed={wind_seed} done. "
+        f"Mean uncertainty={eval_metrics['mean_average_uncertainty']:.6f}, "
+        f"Coverage={eval_metrics['mean_coverage_percent']:.2f}%, "
+        f"Mean lifetime={eval_metrics['mean_uav_lifetime_steps']:.2f} steps."
+    )
+
+    return {
+        "algorithm_id": algorithm_id,
+        "algorithm_label": algorithm_label,
+        "algorithm_file": "Our_experiment/HCSAC/HCSAC_vis_offloading_seed_executor_range.py",
+        "wind_seed": int(wind_seed),
+        "wind_class": wind_class_name(wind_seed),
+        "search_elapsed_sec": 0.0,
+        "eval_elapsed_sec": eval_elapsed,
+        "search": {
+            "ga_objective_mean_average_uncertainty": None,
+            "best_run_traj_seed": None,
+            "best_step_count": None,
+            "best_iteration_seed_set": [],
+            "iteration_sampled_traj_seeds": [],
+        },
+        "best": {
+            "best_solution": None,
+            "start_positions": None,
+            "end_positions": None,
+            "trajectory_actions": None,
+            "offload_actions": None,
         },
         "metrics": eval_metrics,
     }
@@ -585,6 +706,7 @@ def main():
         all_runs.append(run_algorithm_rl_offloading(cfg, wind_seed))
         all_runs.append(run_algorithm_no_offloading(cfg, wind_seed))
         all_runs.append(run_algorithm_simple_greedy_offloading(cfg, wind_seed))
+        all_runs.append(run_algorithm_no_ga_offloading(cfg, wind_seed))
 
     by_wind, by_algorithm = build_grouped_summary(all_runs)
     total_elapsed = float(time.time() - total_start)
@@ -617,6 +739,7 @@ def main():
             "eval_traj_seed_start": cfg["eval_traj_seed_start"],
             "eval_traj_seed_end": cfg["eval_traj_seed_end"],
             "eval_repetitions": cfg["eval_repetitions"],
+            "coverage_definition": "coverage = 1 - uncertainty",
             "num_total_runs": int(len(all_runs)),
             "total_elapsed_sec": total_elapsed,
         },
