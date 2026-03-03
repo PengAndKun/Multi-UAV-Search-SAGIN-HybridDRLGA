@@ -7,6 +7,7 @@ ALGORITHM_ORDER = [
     "ga_deployment_seed_search_2",
     "ga_deployment_seed_search_2_no_offloading",
     "ga_deployment_seed_search_2_rule_based_offloading_2",
+    "no_ga_drl_only_offloading",
 ]
 
 ALGORITHM_DISPLAY = {
@@ -25,6 +26,11 @@ ALGORITHM_DISPLAY = {
         "offloading": "Yes",
         "ga": "Yes",
     },
+    "no_ga_drl_only_offloading": {
+        "variant": "No-GA (DRL-only)",
+        "offloading": "Yes",
+        "ga": "No",
+    },
 }
 
 WIND_ORDER = [11, 23, 4800]
@@ -38,7 +44,7 @@ WIND_LABEL = {
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Read the GA comparison JSON and print a terminal table for the three algorithms "
+            "Read the GA comparison JSON and print a terminal table for the four algorithms "
             "across Low/Moderate/Strong wind."
         )
     )
@@ -98,8 +104,13 @@ def format_lifetime(metrics, unit):
     )
 
 
-def format_uncertainty(metrics):
-    return format_pm(metrics["mean_average_uncertainty"], metrics["std_average_uncertainty"], digits=4)
+def format_coverage(metrics):
+    if "mean_coverage_percent" in metrics and "std_coverage_percent" in metrics:
+        return format_pm(metrics["mean_coverage_percent"], metrics["std_coverage_percent"], digits=2)
+
+    mean_unc = float(metrics["mean_average_uncertainty"])
+    std_unc = float(metrics["std_average_uncertainty"])
+    return format_pm((1.0 - mean_unc) * 100.0, std_unc * 100.0, digits=2)
 
 
 def metric_label(unit):
@@ -135,7 +146,7 @@ def build_rows(data, lifetime_unit):
                 row.extend(["N/A", "N/A"])
             else:
                 row.append(format_lifetime(wind_metrics, lifetime_unit))
-                row.append(format_uncertainty(wind_metrics))
+                row.append(format_coverage(wind_metrics))
         rows.append(row)
     return rows
 
@@ -144,7 +155,7 @@ def build_headers(lifetime_unit):
     headers = ["Variant", "Offloading", "GA"]
     for wind_seed in WIND_ORDER:
         headers.append(f"{WIND_LABEL[wind_seed]} {metric_label(lifetime_unit)}")
-        headers.append(f"{WIND_LABEL[wind_seed]} Avg Unc")
+        headers.append(f"{WIND_LABEL[wind_seed]} Coverage (%)")
     return headers
 
 
